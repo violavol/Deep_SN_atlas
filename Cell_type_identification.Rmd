@@ -26,6 +26,7 @@ rm(list = ls())
 ### Load data
 
 ```{r get raw gene expression and metadata files, echo=TRUE}
+library(Seurat)
 load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/raw_gene_expression.RData")
 ```
 
@@ -63,7 +64,6 @@ combined_all <- RunUMAP(combined_all, reduction = "pca", dims = 1:40)
 combined_all <- FindNeighbors(combined_all, reduction = "pca", dims = 1:40)
 combined_all <- FindClusters(combined_all, resolution = 0.3)
 
-DimPlot(combined_all, reduction = "umap", group.by = "Disease")
 ``` 
 
 ### Cell type identification
@@ -82,6 +82,8 @@ cellType <- c("ODC","ODC","DaN","DaN","Microglia","Astrocyte","OPC","GABA","DaN"
 names(cellType) <- levels(combined_all)
 combined_all <- RenameIdents(combined_all, cellType)
 combined_all$CellType<-Idents(combined_all)
+
+DimPlot(combined_all, reduction = "umap", split.by = "Disease",group.by="CellType")
 
 metadataALL<-as.data.frame(combined_all@meta.data)
 genesALL<-as.matrix(GetAssayData(combined_all, slot = "counts"))
@@ -123,12 +125,17 @@ tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors)
 DefaultAssay(tmp_cell.combined) <- "integrated"
 
 tmp_cell.combined <- ScaleData(tmp_cell.combined, verbose = FALSE)
-tmp_cell.combined <- RunPCA(tmp_cell.combined, npcs = 30, verbose = FALSE)
-tmp_cell.combined <- RunUMAP(tmp_cell.combined, reduction = "pca", dims = 1:30)
-tmp_cell.combined <- FindNeighbors(tmp_cell.combined, reduction = "pca", dims = 1:30)
-tmp_cell.combined <- FindClusters(tmp_cell.combined, resolution = 0.3)
+tmp_cell.combined <- RunPCA(tmp_cell.combined, npcs = 40, verbose = FALSE)
+tmp_cell.combined <- RunUMAP(tmp_cell.combined, reduction = "pca", dims = 1:40)
+tmp_cell.combined <- FindNeighbors(tmp_cell.combined, reduction = "pca", dims = 1:40)
+tmp_cell.combined <- FindClusters(tmp_cell.combined, resolution = 0.2)
 
-DimPlot(tmp_cell.combined, reduction = "umap", group.by = "Disease")
+DimPlot(tmp_cell.combined, reduction = "umap", split.by = "Disease",group.by="seurat_clusters")
+
+# load processed data file with all annotated cell subtypes
+load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/SN_deep_atlas_Nov2022.RData")
+
+DimPlot(sn_atlas, reduction = "umap", split.by = "Disease",group.by="CellSubType")
 
 ```
 
