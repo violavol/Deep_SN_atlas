@@ -1,0 +1,85 @@
+---
+title: "Deep Transcriptomic Atlas of Substantia Nigra in Parkinson's Disease"
+author: "Viola Volpato"
+date: 'Last update: `r date()`'
+output:
+  html_document:
+    fig_height: 5
+    fig_width: 5
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+      toc_depth: 5
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+
+```{r clean r session, include=FALSE}
+rm(list = ls())
+```
+
+### Load data
+
+```{r get raw gene expression and metadata files, echo=TRUE}
+load("/scratch/c.mpmvv/Postmortem_02_NovaSeq/src/Intron_filtering.RData")
+```
+
+### DATA INTEGRATION ANALYSIS BY DISEASE 
+
+```{r perform data integration,echo=TRUE}
+
+data_all <- chipALL_exonintron_filt
+data_all.list <- SplitObject(data_all, split.by = "Disease")
+
+# normalize and identify variable features for each dataset independently
+data_all.list <- lapply(X = data_all.list, FUN = function(x) {
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+
+# select features that are repeatedly variable across datasets for integration run PCA on each
+# dataset using these features
+features <- SelectIntegrationFeatures(object.list = data_all.list)
+data_all.list <- lapply(X = data_all.list, FUN = function(x) {
+    x <- ScaleData(x, features = features, verbose = FALSE)
+    x <- RunPCA(x, features = features, verbose = FALSE)
+})
+
+anchors_all <- FindIntegrationAnchors(object.list = data_all.list, anchor.features = features, reduction = "rpca", k.anchor=20)
+# this command creates an 'integrated' data assay
+combined_all <- IntegrateData(anchorset = anchors_all)
+
+DefaultAssay(combined_all) <- "integrated"
+
+# Run the standard workflow for visualization and clustering
+combined_all <- ScaleData(combined_all, verbose = FALSE)
+combined_all <- RunPCA(combined_all, npcs = 40, verbose = FALSE)
+combined_all <- RunUMAP(combined_all, reduction = "pca", dims = 1:40)
+combined_all <- FindNeighbors(combined_all, reduction = "pca", dims = 1:40)
+combined_all <- FindClusters(combined_all, resolution = 0.3)
+
+DimPlot(combined_all, reduction = "umap", group.by = "Disease")
+``` 
+
+### Cell type identification
+
+```{r cell type identification, echo=TRUE}
+
+DefaultAssay(combined_all) <- "RNA"
+
+markersALL<-c("GFRA2","CALCR","CRYM","CCDC68","PPP1R17","TRHR","TH","GRIN2C","SLC18A2","DCX","LMX1A","GAD2","GAD1","NTSR1","SLC6A3","KCNJ6","PITX3","CHRNA4","LMX1B","GRIK3","ALDH1A1","AQP4","GFAP","VCAN","MOBP","MOG","CSF1R","CD8A","PTPRC","CLDN5","PTH1R")
+
+DotPlot(combined_all, features = markersALL, dot.scale = 8) +
+    RotatedAxis()
+
+```
+
+### Find cell type specific gene markers
+
+
+
