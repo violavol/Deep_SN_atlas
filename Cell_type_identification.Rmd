@@ -77,9 +77,95 @@ markersALL<-c("GFRA2","CALCR","CRYM","CCDC68","PPP1R17","TRHR","TH","GRIN2C","SL
 DotPlot(combined_all, features = markersALL, dot.scale = 8) +
     RotatedAxis()
 
+combined_all$cluster <- Idents(combined_all)
+cellType <- c("ODC","ODC","DaN","DaN","Microglia","Astrocyte","OPC","GABA","DaN","DaN","DaN","Tcell")
+names(cellType) <- levels(combined_all)
+combined_all <- RenameIdents(combined_all, cellType)
+combined_all$CellType<-Idents(combined_all)
+
+metadataALL<-as.data.frame(combined_all@meta.data)
+genesALL<-as.matrix(GetAssayData(combined_all, slot = "counts"))
+
 ```
+
+### Cell subtype identification
+
+```{r subtype identification, echo=TRUE}
+
+# TO DO FOR EACH MAIN CELL TYPE
+
+metadataALL_tmp<-metadataALL[metadataALL$CellType=="DaN",]
+metadataALL_tmp<-metadataALL_tmp[metadataALL_tmp$Sample_v2!="14_133",] #outlier sample!
+genesALL_tmp<-genesALL[,colnames(genesALL)%in%rownames(metadataALL_tmp)]
+
+tmp_cell <- CreateSeuratObject(counts = genesALL_tmp, min.cells = 0, min.features = 0,meta.data= metadataALL_tmp)
+
+tmp_cell.list <- SplitObject(tmp_cell, split.by = "Disease")
+
+tmp_cell.list <- lapply(X = tmp_cell.list, FUN = function(x) {
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+
+features <- SelectIntegrationFeatures(object.list = tmp_cell.list)
+tmp_cell.list <- lapply(X = tmp_cell.list, FUN = function(x) {
+    x <- ScaleData(x, features = features, verbose = FALSE)
+    x <- RunPCA(x, features = features, verbose = FALSE)
+})
+
+tmp_cell.anchors <- FindIntegrationAnchors(object.list = tmp_cell.list, anchor.features = features, reduction = "rpca", k.anchor=20)
+tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors) 
+
+#tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors) # for odc
+#tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors,k.weight=80) # for microglia
+#tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors,k.weight=120) # for astro
+
+DefaultAssay(tmp_cell.combined) <- "integrated"
+
+tmp_cell.combined <- ScaleData(tmp_cell.combined, verbose = FALSE)
+tmp_cell.combined <- RunPCA(tmp_cell.combined, npcs = 30, verbose = FALSE)
+tmp_cell.combined <- RunUMAP(tmp_cell.combined, reduction = "pca", dims = 1:30)
+tmp_cell.combined <- FindNeighbors(tmp_cell.combined, reduction = "pca", dims = 1:30)
+tmp_cell.combined <- FindClusters(tmp_cell.combined, resolution = 0.3)
+
+DimPlot(tmp_cell.combined, reduction = "umap", group.by = "Disease")
+
+```
+
 
 ### Find cell type specific gene markers
 
+```{r gene markers, echo=TRUE}
+
+DefaultAssay(combined_all) <- "RNA"
+Idents(combined_all)<-combined_all$CellType
+clusterALLMarkers <- FindAllMarkers(combined_all, only.pos = FALSE, min.pct = 0.1, thresh.use = 0.2)
+
+```
+
+### Changes in cell type proportions
+
+```{r cell_prop, echo=TRUE}
+
+library("scProportionTest")
+prop_test <- sc_utils(combined_all)
+
+prop_test <- permutation_test(
+	prop_test, cluster_identity = "CellSubType",
+	sample_1 = "CTR", sample_2 = "PD_B5-6",
+	sample_identity = "Disease"
+)
+```
+
+### Find DEG CTR vs PD within each cell type
+
+```{r deg_by_cellType, echo=TRUE}
+combined_all$clust.disease <- paste(Idents(combined_all), combined_all$Disease, sep = "_")
+combined_all$cluster <- Idents(combined_all)
+Idents(combined_all) <- "clust.disease"
+
+CTRvsPD56_DaN <- FindMarkers(combined_all, ident.1 = "DaN_CTR", ident.2 = "DaN_PD_B5-6", verbose = FALSE)
+
+```
 
 
