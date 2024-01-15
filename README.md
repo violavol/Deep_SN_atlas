@@ -6,7 +6,7 @@ This repository contains code and data to reproduce all main figures and analysi
 
 R data files:
 
-- seurat object with raw gene expression data (".RData")
+- seurat object with raw gene expression data ("raw_gene_expression.RData")
 - seurat object with processed data (cell type and cell subtype clusters, "SN_deep_atlas_Nov2022.RData.RData")
 
 
