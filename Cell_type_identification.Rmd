@@ -26,7 +26,7 @@ rm(list = ls())
 ### Load data
 
 ```{r get raw gene expression and metadata files, echo=TRUE}
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/Intron_filtering.RData")
+load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/raw_gene_expression.RData")
 ```
 
 ### DATA INTEGRATION ANALYSIS BY DISEASE 
