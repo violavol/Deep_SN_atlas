@@ -25,7 +25,7 @@ rm(list = ls())
 
 ### Load data
 
-```{r get raw gene expression and metadata files, echo=TRUE}
+```{r get raw data, echo=TRUE}
 library(Seurat)
 load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/raw_gene_expression.RData")
 ```
@@ -34,7 +34,7 @@ load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/r
 
 ```{r perform data integration,echo=TRUE}
 
-data_all <- chipALL_exonintron_filt
+data_all <- sn_atlas_unprocessed
 data_all.list <- SplitObject(data_all, split.by = "Disease")
 
 # normalize and identify variable features for each dataset independently
@@ -51,7 +51,7 @@ data_all.list <- lapply(X = data_all.list, FUN = function(x) {
     x <- RunPCA(x, features = features, verbose = FALSE)
 })
 
-anchors_all <- FindIntegrationAnchors(object.list = data_all.list, anchor.features = features, reduction = "rpca", k.anchor=20)
+anchors_all <- FindIntegrationAnchors(object.list = data_all.list, anchor.features = features, reduction = "rpca", k.anchor=40)
 # this command creates an 'integrated' data assay
 combined_all <- IntegrateData(anchorset = anchors_all)
 
@@ -62,7 +62,7 @@ combined_all <- ScaleData(combined_all, verbose = FALSE)
 combined_all <- RunPCA(combined_all, npcs = 40, verbose = FALSE)
 combined_all <- RunUMAP(combined_all, reduction = "pca", dims = 1:40)
 combined_all <- FindNeighbors(combined_all, reduction = "pca", dims = 1:40)
-combined_all <- FindClusters(combined_all, resolution = 0.3)
+combined_all <- FindClusters(combined_all, resolution = 0.5)
 
 ``` 
 
@@ -78,7 +78,7 @@ DotPlot(combined_all, features = markersALL, dot.scale = 8) +
     RotatedAxis()
 
 combined_all$cluster <- Idents(combined_all)
-cellType <- c("ODC","ODC","DaN","DaN","Microglia","Astrocyte","OPC","GABA","DaN","DaN","DaN","Tcell")
+cellType <- c("ODC","ODC","DaN","DaN","Microglia","DaN","Astrocyte","OPC","GABA","DaN","Tcells")
 names(cellType) <- levels(combined_all)
 combined_all <- RenameIdents(combined_all, cellType)
 combined_all$CellType<-Idents(combined_all)
@@ -97,7 +97,6 @@ genesALL<-as.matrix(GetAssayData(combined_all, slot = "counts"))
 # TO DO FOR EACH MAIN CELL TYPE
 
 metadataALL_tmp<-metadataALL[metadataALL$CellType=="DaN",]
-metadataALL_tmp<-metadataALL_tmp[metadataALL_tmp$Sample_v2!="14_133",] #outlier sample!
 genesALL_tmp<-genesALL[,colnames(genesALL)%in%rownames(metadataALL_tmp)]
 
 tmp_cell <- CreateSeuratObject(counts = genesALL_tmp, min.cells = 0, min.features = 0,meta.data= metadataALL_tmp)
@@ -115,7 +114,7 @@ tmp_cell.list <- lapply(X = tmp_cell.list, FUN = function(x) {
     x <- RunPCA(x, features = features, verbose = FALSE)
 })
 
-tmp_cell.anchors <- FindIntegrationAnchors(object.list = tmp_cell.list, anchor.features = features, reduction = "rpca", k.anchor=20)
+tmp_cell.anchors <- FindIntegrationAnchors(object.list = tmp_cell.list, anchor.features = features, reduction = "rpca", k.anchor=40)
 tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors) 
 
 #tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors) # for odc
@@ -131,6 +130,12 @@ tmp_cell.combined <- FindNeighbors(tmp_cell.combined, reduction = "pca", dims = 
 tmp_cell.combined <- FindClusters(tmp_cell.combined, resolution = 0.2)
 
 DimPlot(tmp_cell.combined, reduction = "umap", split.by = "Disease",group.by="seurat_clusters")
+
+DefaultAssay(tmp_cell.combined) <- "RNA"
+dan_markers <- c("SOX6", "GRIA3", "DCX", "AGTR1", "LMX1B", "GRIK3", "RET", "GFRA2", "PITX3", "CHRNA4", "SLC18A2", "SLC6A3", "TH", "KCNJ6", "ALDH1A1", "TMEM255A", "LGI1",   "TMEFF2")
+DotPlot(tmp_cell.combined, features = dan_markers, dot.scale = 8) +
+    RotatedAxis()
+
 
 # load processed data file with all annotated cell subtypes
 load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/SN_deep_atlas_Nov2022.RData")
