@@ -37,3 +37,13 @@ library(RColorBrewer)
 ```{r get raw data, echo=TRUE}
 load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
 ```
+
+### Pseudotime analysis
+
+# all DaNs
+
+# DaN_1 to DaN_3
+
+### Control ipsc
+
+
