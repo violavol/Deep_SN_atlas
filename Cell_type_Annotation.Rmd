@@ -37,7 +37,7 @@ library(RColorBrewer)
 ### Load data
 
 ```{r get raw data, echo=TRUE}
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_unprocessed.RData")
+load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_unprocessed.RData")
 ```
 
 ### DATA INTEGRATION BY DISEASE
@@ -158,7 +158,7 @@ DotPlot(tmp_cell.combined, features = dan_markers, dot.scale = 8,idents = c(0,1,
 
 
 # load processed data file with all annotated cell subtypes
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
 
 
 df<-data.frame(table(sn_atlas_processed$CellSubType,sn_atlas_processed$Disease))
