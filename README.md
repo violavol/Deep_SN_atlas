@@ -19,5 +19,5 @@ R data files:
 - Pseudotime analysis to identify disease progression transcriptomic axis
 - Cell-cell communication analysis
 - Splicing analysis
-- DaN subtype pseudotime analysis
+- DaN subtype (AGTR1+) analysis
 
