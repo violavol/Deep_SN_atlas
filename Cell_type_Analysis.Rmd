@@ -38,8 +38,53 @@ library(RColorBrewer)
 load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
 ```
 
+### Find cell type specific gene markers
+
+```{r gene markers, echo=TRUE}
+
+Idents(sn_atlas_processed)<-sn_atlas_processed$CellType
+clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pct = 0.1, thresh.use = 0.2)
+
+```
+
+### Changes in cell type proportions
+
+```{r cell_prop, echo=TRUE}
+
+library("scProportionTest")
+prop_test <- sc_utils(sn_atlas_processed)
+
+prop_test <- permutation_test(
+	prop_test, cluster_identity = "CellSubType",
+	sample_1 = "CTR", sample_2 = "PD_B5-6",
+	sample_identity = "Disease"
+)
+```
+
+### Find DEGs CTR vs PD within each cell type
+
+```{r deg_by_cellType, echo=TRUE}
+sn_atlas_processed$clust.disease <- paste(sn_atlas_processed$CellType, sn_atlas_processed$Disease, sep = "_")
+sn_atlas_processed$cluster <- Idents(sn_atlas_processed)
+Idents(sn_atlas_processed) <- "clust.disease"
+
+CTRvsPD56_DaN <- FindMarkers(sn_atlas_processed, ident.1 = "DaN_CTR", ident.2 = "DaN_PD_B5-6", verbose = FALSE)
+CTRvsPD56_ODC <- FindMarkers(sn_atlas_processed, ident.1 = "ODC_CTR", ident.2 = "ODC_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Astrocyte <- FindMarkers(sn_atlas_processed, ident.1 = "Astrocyte_CTR", ident.2 = "Astrocyte_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Microglia <- FindMarkers(sn_atlas_processed, ident.1 = "Microglia_CTR", ident.2 = "Microglia_PD_B5-6", verbose = FALSE)
+CTRvsPD56_OPC <- FindMarkers(sn_atlas_processed, ident.1 = "OPC_CTR", ident.2 = "OPC_PD_B5-6", verbose = FALSE)
+CTRvsPD56_GABA <- FindMarkers(sn_atlas_processed, ident.1 = "GABA_CTR", ident.2 = "GABA_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Tcell <- FindMarkers(sn_atlas_processed, ident.1 = "Tcell_CTR", ident.2 = "Tcell_PD_B5-6", verbose = FALSE)
+
+```
+
+### Pathway analysis
+
 
 ### Pseudotime analysis for each cell type
 
 
 ### Cell-cell communication analysis
+
+
+### Network analysis
