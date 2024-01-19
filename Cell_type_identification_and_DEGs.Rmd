@@ -30,6 +30,7 @@ library(ggplot2)
 library(Seurat)
 devtools::install_github("rpolicastro/scProportionTest")
 library("scProportionTest")
+library(RColorBrewer)
 ```
 
 
@@ -191,7 +192,7 @@ prop_test <- permutation_test(
 )
 ```
 
-### Find DEG CTR vs PD within each cell type
+### Find DEGs CTR vs PD within each cell type
 
 ```{r deg_by_cellType, echo=TRUE}
 sn_atlas_processed$clust.disease <- paste(sn_atlas_processed$CellType, sn_atlas_processed$Disease, sep = "_")
