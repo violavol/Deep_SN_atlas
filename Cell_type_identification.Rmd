@@ -23,14 +23,25 @@ output:
 rm(list = ls())
 ```
 
+### Install and load library
+
+```{r load lib, echo=TRUE}
+library(ggplot2)
+library(Seurat)
+devtools::install_github("rpolicastro/scProportionTest")
+library("scProportionTest")
+```
+
+
 ### Load data
 
 ```{r get raw data, echo=TRUE}
-library(Seurat)
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/raw_gene_expression.RData")
+load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_unprocessed.RData")
 ```
 
-### DATA INTEGRATION ANALYSIS BY DISEASE 
+### DATA INTEGRATION BY DISEASE
+
+# Seurat fast integration using reciprocal PCA (see https://satijalab.org/seurat/articles/integration_rpca)
 
 ```{r perform data integration,echo=TRUE}
 
@@ -51,7 +62,7 @@ data_all.list <- lapply(X = data_all.list, FUN = function(x) {
     x <- RunPCA(x, features = features, verbose = FALSE)
 })
 
-anchors_all <- FindIntegrationAnchors(object.list = data_all.list, anchor.features = features, reduction = "rpca", k.anchor=40)
+anchors_all <- FindIntegrationAnchors(object.list = data_all.list, anchor.features = features, reduction = "rpca", k.anchor=20)
 # this command creates an 'integrated' data assay
 combined_all <- IntegrateData(anchorset = anchors_all)
 
@@ -78,7 +89,7 @@ DotPlot(combined_all, features = markersALL, dot.scale = 8) +
     RotatedAxis()
 
 combined_all$cluster <- Idents(combined_all)
-cellType <- c("ODC","ODC","DaN","DaN","Microglia","DaN","Astrocyte","OPC","GABA","DaN","Tcells")
+cellType <- c("ODC","ODC","DaN","DaN","Microglia","Astrocyte","OPC","GABA","DaN","DaN","DaN","Tcell")
 names(cellType) <- levels(combined_all)
 combined_all <- RenameIdents(combined_all, cellType)
 combined_all$CellType<-Idents(combined_all)
@@ -97,6 +108,7 @@ genesALL<-as.matrix(GetAssayData(combined_all, slot = "counts"))
 # TO DO FOR EACH MAIN CELL TYPE
 
 metadataALL_tmp<-metadataALL[metadataALL$CellType=="DaN",]
+metadataALL_tmp<-metadataALL_tmp[metadataALL_tmp$Sample_v2!="14_133",] # outlier sample in both UMAP plot of all DaNs and in following pseudotime analysis (still to investigate why)
 genesALL_tmp<-genesALL[,colnames(genesALL)%in%rownames(metadataALL_tmp)]
 
 tmp_cell <- CreateSeuratObject(counts = genesALL_tmp, min.cells = 0, min.features = 0,meta.data= metadataALL_tmp)
@@ -119,7 +131,7 @@ tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors)
 
 #tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors) # for odc
 #tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors,k.weight=80) # for microglia
-#tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors,k.weight=120) # for astro
+#tmp_cell.combined <- IntegrateData(anchorset = tmp_cell.anchors,k.weight=120) # for astrocytes
 
 DefaultAssay(tmp_cell.combined) <- "integrated"
 
@@ -133,14 +145,25 @@ DimPlot(tmp_cell.combined, reduction = "umap", split.by = "Disease",group.by="se
 
 DefaultAssay(tmp_cell.combined) <- "RNA"
 dan_markers <- c("SOX6", "GRIA3", "DCX", "AGTR1", "LMX1B", "GRIK3", "RET", "GFRA2", "PITX3", "CHRNA4", "SLC18A2", "SLC6A3", "TH", "KCNJ6", "ALDH1A1", "TMEM255A", "LGI1",   "TMEFF2")
-DotPlot(tmp_cell.combined, features = dan_markers, dot.scale = 8) +
+DotPlot(tmp_cell.combined, features = dan_markers, dot.scale = 8,idents = c(0,1,2,3)) + # clusters 4 and 5 are not used as too small and only present in ILBD_B3-4
     RotatedAxis()
 
 
-# load processed data file with all annotated cell subtypes
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/processed_data/SN_deep_atlas_Nov2022.RData")
+# markers_ODC=c("PLXDC2","PLP1","SPARC","DHCR24","TUBA1A","PMP2","RBFOX1","AFF3","FMN1","PALM2","HHIP","OPALIN","LAMA2") # selected from https://www.biorxiv.org/content/10.1101/2022.03.22.485367v1.full.pdf
 
-DimPlot(sn_atlas, reduction = "umap", split.by = "Disease",group.by="CellSubType")
+# markers_microglia=c("PTPRC","ITGAM","AIF1","C1QA","CTSS","CD14","CSF3R","ARGLU1","FAM46A","IFIT3","ISG15","MRC1","TNF","CD83","EGR2","TNFSF18","CCL8","TFRC","PCNA","RASGEF1C","AC008691.1", "TLN2","GPNMB","ACSL1","CXCR4","NTM", "MAGI2", "SCD", "PLP1","NRG3")  (check https://www.biorxiv.org/content/10.1101/2022.03.22.485367v1.full.pdf and https://www.nature.com/articles/s41467-020-19737-2) markers.to.plot=c("MRC1","IL10","ABCC4","CSF2RA","CSF3R","TFRC","KLF4","PTGS1","DOCK8","KCNQ1","PTPRC","GPNMB","SPP1","TYROBP","TREM2","TLR2","MS4A4A","IL13RA1","INPP5D","ITGAM","ADAP2","APBB1IP","SP140L","VAV1") # macrophage M2: "MRC1","IL10","ABCC4","CSF2RA","CSF3R","TFRC","KLF4","PTGS1","DOCK8"
+
+# markers_astrocyte=c("GABRA2","EDNRB","PPFIA2","KCNJ16","BHLHE40","SLC6A11","PAK3","GRM5","PTPRT","FAT3","EPHA6","EPHB1","ADGRV1","SPOCK1","SPSB1","MYO1E","SLC24A2","ELMO1","NKAIN2","PLP1","S100B","TMSB4X") 
+
+
+# load processed data file with all annotated cell subtypes
+load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+
+
+df<-data.frame(table(sn_atlas_processed$CellSubType,sn_atlas_processed$Disease))
+# plot number_of_cells_byCellSubType_byDisease
+ggplot(df, aes(x = Var1, y = Freq, fill=Var2)) + geom_bar(stat = "identity", position=position_dodge()) +  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
 
 ```
 
@@ -149,9 +172,8 @@ DimPlot(sn_atlas, reduction = "umap", split.by = "Disease",group.by="CellSubType
 
 ```{r gene markers, echo=TRUE}
 
-DefaultAssay(combined_all) <- "RNA"
-Idents(combined_all)<-combined_all$CellType
-clusterALLMarkers <- FindAllMarkers(combined_all, only.pos = FALSE, min.pct = 0.1, thresh.use = 0.2)
+Idents(sn_atlas_processed)<-sn_atlas_processed$CellType
+clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pct = 0.1, thresh.use = 0.2)
 
 ```
 
@@ -160,7 +182,7 @@ clusterALLMarkers <- FindAllMarkers(combined_all, only.pos = FALSE, min.pct = 0.
 ```{r cell_prop, echo=TRUE}
 
 library("scProportionTest")
-prop_test <- sc_utils(combined_all)
+prop_test <- sc_utils(sn_atlas_processed)
 
 prop_test <- permutation_test(
 	prop_test, cluster_identity = "CellSubType",
@@ -172,11 +194,17 @@ prop_test <- permutation_test(
 ### Find DEG CTR vs PD within each cell type
 
 ```{r deg_by_cellType, echo=TRUE}
-combined_all$clust.disease <- paste(Idents(combined_all), combined_all$Disease, sep = "_")
-combined_all$cluster <- Idents(combined_all)
-Idents(combined_all) <- "clust.disease"
+sn_atlas_processed$clust.disease <- paste(sn_atlas_processed$CellType, sn_atlas_processed$Disease, sep = "_")
+sn_atlas_processed$cluster <- Idents(sn_atlas_processed)
+Idents(sn_atlas_processed) <- "clust.disease"
 
-CTRvsPD56_DaN <- FindMarkers(combined_all, ident.1 = "DaN_CTR", ident.2 = "DaN_PD_B5-6", verbose = FALSE)
+CTRvsPD56_DaN <- FindMarkers(sn_atlas_processed, ident.1 = "DaN_CTR", ident.2 = "DaN_PD_B5-6", verbose = FALSE)
+CTRvsPD56_ODC <- FindMarkers(sn_atlas_processed, ident.1 = "ODC_CTR", ident.2 = "ODC_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Astrocyte <- FindMarkers(sn_atlas_processed, ident.1 = "Astrocyte_CTR", ident.2 = "Astrocyte_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Microglia <- FindMarkers(sn_atlas_processed, ident.1 = "Microglia_CTR", ident.2 = "Microglia_PD_B5-6", verbose = FALSE)
+CTRvsPD56_OPC <- FindMarkers(sn_atlas_processed, ident.1 = "OPC_CTR", ident.2 = "OPC_PD_B5-6", verbose = FALSE)
+CTRvsPD56_GABA <- FindMarkers(sn_atlas_processed, ident.1 = "GABA_CTR", ident.2 = "GABA_PD_B5-6", verbose = FALSE)
+CTRvsPD56_Tcell <- FindMarkers(sn_atlas_processed, ident.1 = "Tcell_CTR", ident.2 = "Tcell_PD_B5-6", verbose = FALSE)
 
 ```
 
