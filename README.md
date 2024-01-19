@@ -21,3 +21,7 @@ R data files:
 - Splicing analysis
 - DaN subtype (AGTR1+) analysis
 
+## R packages
+
+The following R packages need to be installed:
+
