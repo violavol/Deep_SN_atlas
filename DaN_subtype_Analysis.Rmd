@@ -35,5 +35,5 @@ library(RColorBrewer)
 ### Load data
 
 ```{r get raw data, echo=TRUE}
-load("/gluster/dri02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
 ```
