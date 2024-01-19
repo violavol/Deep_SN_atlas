@@ -10,5 +10,14 @@ R data files:
 - seurat object with processed data (cell type and cell subtype clusters, "sn_atlas_processed.RData")
 
 
+## Analyses
 
+- Cell type annotation using data integration analysis
+- Analysis of changes in cell type proportions between cases and controls
+- Cell type-specific DEGs between cases and controls
+- Pathway and network analysis
+- Pseudotime analysis to identify disease progression transcriptomic axis
+- Cell-cell communication analysis
+- Splicing analysis
+- DaN subtype pseudotime analysis
 
