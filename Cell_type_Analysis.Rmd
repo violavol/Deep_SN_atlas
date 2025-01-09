@@ -161,8 +161,28 @@ for(m in unique(df$cellt)){
 }
 write.table(data.frame(list_gene),file="input_magma_level1_2p",quote=FALSE,row.names=FALSE,col.names=FALSE,sep="\t")
 
+```
+
+### Cell type-specific PPI networks
+
+```{r cellt_PPI, echo=TRUE}
+library(igraph)
+
+# to be done for DaN_3, ODC_2 and OPC (where PD genetic risk converged)
+
+ppi_net<-read.delim("ppi_net_new2023short",h=F)
+ppi_net_dan3top1000<-ppi_net[ppi_net[,1]%in%rownames(df_w_test_DaN[oder(-df_w_test_DaN$DaN_3),])[1:1000] & ppi_net[,2]%in%rownames(df_w_test_DaN[oder(-df_w_test_DaN$DaN_3),])[1:1000] ,]
+ppi_net_dan3top1000_genes<-unique(c(as.character(ppi_net_dan3top1000[,1]),as.character(ppi_net_dan3top1000[,2])))
+
+net_1 <- graph_from_data_frame(d= ppi_net_dan3top1000, vertices= ppi_net_dan3top1000_genes, directed=F)
+cl_net_1<-cluster_louvain(net_1)
+memb_net_1<-as.matrix(membership(cl_net_1))
+
+memb_net_dan3top1000ppi_df<-data.frame(id=rownames(memb_net_1),module=memb_net_1)
+
 
 ```
+
 
 ### Changes in cell type proportions
 
