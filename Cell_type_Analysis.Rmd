@@ -209,7 +209,13 @@ propeller(clusters = sn_atlas_processed_tmp$CellSubType, sample = sn_atlas_proce
 
 plotCellTypeProps(clusters=sn_atlas_processed_tmp$seurat_clusters, sample=sn_atlas_processed_tmp$Disease)
 
-
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=Disease=="CTR" | Disease=="PD_B5-6")
+df_tmp<-data.frame(table(sn_atlas_processed_tmp$CellSubType))
+prop_df_ctr_pd56$prop<-prop_df_ctr_pd56$Freq/df_tmp$Freq*100
+pdf("celltype_prop_CTR_PD56.pdf",6,3)
+ggplot(data=prop_df_ctr_pd56, aes(x=Var1, y=prop, fill=Var2)) +
+     geom_bar(stat="identity") + scale_fill_manual(values=c('mediumorchid','skyblue')) + theme(axis.text.x = element_text( color = "black",size = 10, angle = 45,hjust=1))
+dev.off()
 
 
 ```
@@ -253,7 +259,55 @@ dan2_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_2_PD_B5-6", ident.2 = "D
 dan1_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_1_PD_B5-6", ident.2 = "DaN_1_CTR")
 dan0_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_0_PD_B5-6", ident.2 = "DaN_0_CTR")
 
-deg_FC1andPadj1<-data.frame(celltype=c("Astrocyte_0","Astrocyte_1","Astrocyte_2","Astrocyte_3","DaN_0","DaN_1","DaN_2","DaN_3","GABA","Microglia_0","Microglia_1","Microglia_2","ODC_0","ODC_1","ODC_2","OPC","Tcells"),deg=c(length(astro0_d56[abs(astro0_d56$avg_log2FC)>=1 & astro0_d56$p_val_adj<=0.1,1]), length(astro1_d56[abs(astro1_d56$avg_log2FC)>=1 & astro1_d56$p_val_adj<=0.1,1]), 0, length(astro3_d56[abs(astro3_d56$avg_log2FC)>=1 & astro3_d56$p_val_adj<=0.1,1]), length(dan0_d56[abs(dan0_d56$avg_log2FC)>=1 & dan0_d56$p_val_adj<=0.1,1]), length(dan1_d56[abs(dan1_d56$avg_log2FC)>=1 & dan1_d56$p_val_adj<=0.1,1]), length(dan2_d56[abs(dan2_d56$avg_log2FC)>=1 & dan2_d56$p_val_adj<=0.1,1]), 0, length(gaba_d56[abs(gaba_d56$avg_log2FC)>=1 & gaba_d56$p_val_adj<=0.1,1]), length(micro0_d56[abs(micro0_d56$avg_log2FC)>=1 & micro0_d56$p_val_adj<=0.1,1]), length(micro1_d56[abs(micro1_d56$avg_log2FC)>=1 & micro1_d56$p_val_adj<=0.1,1]), length(micro2_d56[abs(micro2_d56$avg_log2FC)>=1 & micro2_d56$p_val_adj<=0.1,1]), length(odc0_d56[abs(odc0_d56$avg_log2FC)>=1 & odc0_d56$p_val_adj<=0.1,1]), length(odc1_d56[abs(odc1_d56$avg_log2FC)>=1 & odc1_d56$p_val_adj<=0.1,1]),  length(odc2_d56[abs(odc2_d56$avg_log2FC)>=1 & odc2_d56$p_val_adj<=0.1,1]),  length(opc_d56[abs(opc_d56$avg_log2FC)>=1 & opc_d56$p_val_adj<=0.1,1]),  length(tcell_d56[abs(tcell_d56$avg_log2FC)>=1 & tcell_d56$p_val_adj<=0.1,1])))
+deg_FC1andPadj1_numbers<-data.frame(celltype=c("Astrocyte_0","Astrocyte_1","Astrocyte_2","Astrocyte_3","DaN_0","DaN_1","DaN_2","DaN_3","GABA","Microglia_0","Microglia_1","Microglia_2","ODC_0","ODC_1","ODC_2","OPC","Tcells"),deg=c(length(astro0_d56[abs(astro0_d56$avg_log2FC)>=1 & astro0_d56$p_val_adj<=0.1,1]), length(astro1_d56[abs(astro1_d56$avg_log2FC)>=1 & astro1_d56$p_val_adj<=0.1,1]), 0, length(astro3_d56[abs(astro3_d56$avg_log2FC)>=1 & astro3_d56$p_val_adj<=0.1,1]), length(dan0_d56[abs(dan0_d56$avg_log2FC)>=1 & dan0_d56$p_val_adj<=0.1,1]), length(dan1_d56[abs(dan1_d56$avg_log2FC)>=1 & dan1_d56$p_val_adj<=0.1,1]), length(dan2_d56[abs(dan2_d56$avg_log2FC)>=1 & dan2_d56$p_val_adj<=0.1,1]), 0, length(gaba_d56[abs(gaba_d56$avg_log2FC)>=1 & gaba_d56$p_val_adj<=0.1,1]), length(micro0_d56[abs(micro0_d56$avg_log2FC)>=1 & micro0_d56$p_val_adj<=0.1,1]), length(micro1_d56[abs(micro1_d56$avg_log2FC)>=1 & micro1_d56$p_val_adj<=0.1,1]), length(micro2_d56[abs(micro2_d56$avg_log2FC)>=1 & micro2_d56$p_val_adj<=0.1,1]), length(odc0_d56[abs(odc0_d56$avg_log2FC)>=1 & odc0_d56$p_val_adj<=0.1,1]), length(odc1_d56[abs(odc1_d56$avg_log2FC)>=1 & odc1_d56$p_val_adj<=0.1,1]),  length(odc2_d56[abs(odc2_d56$avg_log2FC)>=1 & odc2_d56$p_val_adj<=0.1,1]),  length(opc_d56[abs(opc_d56$avg_log2FC)>=1 & opc_d56$p_val_adj<=0.1,1]),  length(tcell_d56[abs(tcell_d56$avg_log2FC)>=1 & tcell_d56$p_val_adj<=0.1,1])))
+
+
+deg_FC1andPadj1_genes_UP<-list(Astrocyte_0=rownames(astro0_d56[astro0_d56$avg_log2FC>=1 & astro0_d56$p_val_adj<=0.05,]), Astrocyte_1=rownames(astro1_d56[astro1_d56$avg_log2FC>=1 & astro1_d56$p_val_adj<=0.05,]),
+Astrocyte_3=rownames(astro3_d56[astro3_d56$avg_log2FC>=1 & astro3_d56$p_val_adj<=0.05,]),
+DaN_0=rownames(dan0_d56[dan0_d56$avg_log2FC>=1 & dan0_d56$p_val_adj<=0.05,]),
+DaN_1=rownames(dan1_d56[dan1_d56$avg_log2FC>=1 & dan1_d56$p_val_adj<=0.05,]),
+DaN_2=rownames(dan2_d56[dan2_d56$avg_log2FC>=1 & dan2_d56$p_val_adj<=0.05,]),
+GABA=rownames(gaba_d56[gaba_d56$avg_log2FC>=1 & gaba_d56$p_val_adj<=0.05,]),
+Microglia_0=rownames(micro0_d56[micro0_d56$avg_log2FC>=1 & micro0_d56$p_val_adj<=0.05,]),
+Microglia_1=rownames(micro1_d56[micro1_d56$avg_log2FC>=1 & micro1_d56$p_val_adj<=0.05,]),
+Microglia_2=rownames(micro2_d56[micro2_d56$avg_log2FC>=1 & micro2_d56$p_val_adj<=0.05,]),
+ODC_0=rownames(odc0_d56[odc0_d56$avg_log2FC>=1 & odc0_d56$p_val_adj<=0.05,]),
+ODC_1=rownames(odc1_d56[odc1_d56$avg_log2FC>=1 & odc1_d56$p_val_adj<=0.05,]),
+ODC_2=rownames(odc2_d56[odc2_d56$avg_log2FC>=1 & odc2_d56$p_val_adj<=0.05,]),
+OPC=rownames(opc_d56[opc_d56$avg_log2FC>=1 & opc_d56$p_val_adj<=0.05,]),
+Tcell=rownames(tcell_d56[tcell_d56$avg_log2FC>=1 & tcell_d56$p_val_adj<=0.05,])
+)
+
+deg_FC1andPadj1_genes_DOWN<-list(Astrocyte_0=rownames(astro0_d56[astro0_d56$avg_log2FC<= -1 & astro0_d56$p_val_adj<=0.05,]), Astrocyte_1=rownames(astro1_d56[astro1_d56$avg_log2FC<= -1 & astro1_d56$p_val_adj<=0.05,]),
+Astrocyte_3=rownames(astro3_d56[astro3_d56$avg_log2FC<= -1 & astro3_d56$p_val_adj<=0.05,]),
+DaN_0=rownames(dan0_d56[dan0_d56$avg_log2FC<= -1 & dan0_d56$p_val_adj<=0.05,]),
+DaN_1=rownames(dan1_d56[dan1_d56$avg_log2FC<= -1 & dan1_d56$p_val_adj<=0.05,]),
+DaN_2=rownames(dan2_d56[dan2_d56$avg_log2FC<= -1 & dan2_d56$p_val_adj<=0.05,]),
+GABA=rownames(gaba_d56[gaba_d56$avg_log2FC<= -1 & gaba_d56$p_val_adj<=0.05,]),
+Microglia_0=rownames(micro0_d56[micro0_d56$avg_log2FC<= -1 & micro0_d56$p_val_adj<=0.05,]),
+Microglia_1=rownames(micro1_d56[micro1_d56$avg_log2FC<= -1 & micro1_d56$p_val_adj<=0.05,]),
+Microglia_2=rownames(micro2_d56[micro2_d56$avg_log2FC<= -1 & micro2_d56$p_val_adj<=0.05,]),
+ODC_0=rownames(odc0_d56[odc0_d56$avg_log2FC<= -1 & odc0_d56$p_val_adj<=0.05,]),
+ODC_1=rownames(odc1_d56[odc1_d56$avg_log2FC<= -1 & odc1_d56$p_val_adj<=0.05,]),
+ODC_2=rownames(odc2_d56[odc2_d56$avg_log2FC<= -1 & odc2_d56$p_val_adj<=0.05,]),
+OPC=rownames(opc_d56[opc_d56$avg_log2FC<= -1 & opc_d56$p_val_adj<=0.05,]),
+Tcell=rownames(tcell_d56[tcell_d56$avg_log2FC<= -1 & tcell_d56$p_val_adj<=0.05,])
+)
+
+pdf("deg_FC1andPadj1_ALL_numbers.pdf",10,3)
+ggplot(deg_FC1andPadj1_ALL_numbers_melt,aes(x = cellType, y = variable,fill = value))+
+    geom_tile() + scale_fill_gradient2(high = "red",mid = "red", low = "white",midpoint = 2500)+
+    geom_tile() + theme(axis.text.x = element_text( color = "black",size = 10, angle = 45,hjust=1)) + geom_text(aes(label = round(value, 1))) 
+dev.off()
+
+
+jaccard <- function(a, b) {
+    intersection = length(intersect(a, b))
+    union = length(a) + length(b) - intersection
+    return (intersection/union)
+}
+
+
 
 
 ```
