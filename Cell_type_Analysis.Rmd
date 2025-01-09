@@ -36,11 +36,65 @@ library(RColorBrewer)
 
 ```{r get raw data, echo=TRUE}
 load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+
+sn_atlas_processed <- NormalizeData(sn_atlas_processed)
+sn_atlas_processed <- FindVariableFeatures(sn_atlas_processed, selection.method = "vst", nfeatures = 2000)
+sn_atlas_processed <- ScaleData(sn_atlas_processed)
+sn_atlas_processed <- RunPCA(sn_atlas_processed, features = VariableFeatures(object = sn_atlas_processed))
+sn_atlas_processed <- FindNeighbors(sn_atlas_processed, dims = 1:10)
+sn_atlas_processed <- FindClusters(sn_atlas_processed, resolution = 0.6)
+sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
+
 ```
 
 ### Find cell type specific gene markers
 
 ```{r gene markers, echo=TRUE}
+
+# Method 1 (used in the manuscript):
+# to be done for each cell type
+
+list_w_stat<-c()
+df_w_test<-c()
+signed_rank = function(x) sign(x) * rank(abs(x))
+metadataALL<-as.data.frame(sn_atlas_processed@meta.data)
+metadataALL_CTR<-metadataALL[metadataALL$Disease=="CTR",]
+metadataALL_CTR<-metadataALL_CTR[metadataALL_CTR$CellType=="ODC",]
+data<-as.matrix(GetAssayData(sn_atlas_processed, slot = "counts"))
+data<-data[,colnames(data)%in%rownames(metadataALL_CTR)]
+list_cell <- as.array(unique(metadataALL_CTR$CellSubType))
+list_gene <- row.names(data)
+
+compute_w_val<-function(gene_ref,cell_ref,matrix_expr,info_cell) {
+    n_cell<- ncol(data)
+    X<- matrix(-1, nrow = n_cell, ncol = 1)
+    X[which(info_cell$CellSubType==cell_ref),1]<-1
+    Y=t(data[gene_ref,])
+    df<-data.frame(y=t(Y),x=X)
+    colnames(df)<-c("y","x")
+    linearMod <- lm(signed_rank(y) ~ x, data=df)
+    val<-summary(linearMod)
+    list_val<-val$coefficients[2,3]
+    return(val$coefficients[2,3]) ## w-statisc value
+}
+
+for (i in c(1:length(list_cell))) {
+    cell_ref=list_cell[i]
+    print("W test")
+    print(list_cell[i])
+    list_w_stat<-sapply(list_gene,compute_w_val,cell_ref=list_cell[i],matrix_expr=data,info_cell=metadataALL_CTR)
+    if(!exists("df_w_test")) {
+        df_w_test<-data.frame(list_w_stat)
+    } else {
+        df_w_test<-cbind(df_w_test,list_w_stat)
+    }
+}
+colnames(df_w_test) <- list_cell
+write.table(df_w_test,"Wtest_ODCs",quote=F,sep="\t")
+
+
+
+# Method 2:
 
 Idents(sn_atlas_processed)<-sn_atlas_processed$CellType
 clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pct = 0.1, thresh.use = 0.2)
@@ -52,6 +106,11 @@ clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pc
 ```{r cell_prop, echo=TRUE}
 
 library("scProportionTest")
+library(speckle)
+library(limma)
+library(ggplot2)
+
+# Method 1, use FDR-corrected p-values:
 prop_test <- sc_utils(sn_atlas_processed)
 
 prop_test <- permutation_test(
@@ -59,11 +118,24 @@ prop_test <- permutation_test(
 	sample_1 = "CTR", sample_2 = "PD_B5-6",
 	sample_identity = "Disease"
 )
+
+# Method 2, use nominal p-values:
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=Disease=="CTR" | Disease=="PD_B5-6")
+propeller(clusters = sn_atlas_processed_tmp$CellSubType, sample = sn_atlas_processed_tmp$Sample_v2, 
+          group = sn_atlas_processed_tmp$Disease)
+
+plotCellTypeProps(clusters=sn_atlas_processed_tmp$seurat_clusters, sample=sn_atlas_processed_tmp$Disease)
+
+
+
+
 ```
 
 ### Find DEGs CTR vs PD within each cell type
 
 ```{r deg_by_cellType, echo=TRUE}
+
+# level 1:
 sn_atlas_processed$clust.disease <- paste(sn_atlas_processed$CellType, sn_atlas_processed$Disease, sep = "_")
 sn_atlas_processed$cluster <- Idents(sn_atlas_processed)
 Idents(sn_atlas_processed) <- "clust.disease"
@@ -76,9 +148,58 @@ CTRvsPD56_OPC <- FindMarkers(sn_atlas_processed, ident.1 = "OPC_CTR", ident.2 = 
 CTRvsPD56_GABA <- FindMarkers(sn_atlas_processed, ident.1 = "GABA_CTR", ident.2 = "GABA_PD_B5-6", verbose = FALSE)
 CTRvsPD56_Tcell <- FindMarkers(sn_atlas_processed, ident.1 = "Tcell_CTR", ident.2 = "Tcell_PD_B5-6", verbose = FALSE)
 
+# level 2:
+sn_atlas_processed$clust.disease <- paste(sn_atlas_processed$CellSubType, sn_atlas_processed$Disease, sep = "_")
+sn_atlas_processed$cluster <- Idents(sn_atlas_processed)
+Idents(sn_atlas_processed) <- "clust.disease"
+
+opc_d56<-FindMarkers(sn_atlas_processed,ident.1 = "OPC_PD_B5-6", ident.2 = "OPC_CTR")
+tcell_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Tcells_PD_B5-6", ident.2 = "Tcells_CTR")
+odc2_d56<-FindMarkers(sn_atlas_processed,ident.1 = "ODC_2_PD_B5-6", ident.2 = "ODC_2_CTR")
+odc1_d56<-FindMarkers(sn_atlas_processed,ident.1 = "ODC_1_PD_B5-6", ident.2 = "ODC_1_CTR")
+odc0_d56<-FindMarkers(sn_atlas_processed,ident.1 = "ODC_0_PD_B5-6", ident.2 = "ODC_0_CTR")
+micro2_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Microglia_2_PD_B5-6", ident.2 = "Microglia_2_CTR")
+micro1_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Microglia_1_PD_B5-6", ident.2 = "Microglia_1_CTR")
+micro0_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Microglia_0_PD_B5-6", ident.2 = "Microglia_0_CTR")
+gaba_d56<-FindMarkers(sn_atlas_processed,ident.1 = "GABA_PD_B5-6", ident.2 = "GABA_CTR")
+astro3_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Astrocyte_3_PD_B5-6", ident.2 = "Astrocyte_3_CTR")
+astro2_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Astrocyte_2_PD_B5-6", ident.2 = "Astrocyte_2_CTR")
+astro0_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Astrocyte_0_PD_B5-6", ident.2 = "Astrocyte_0_CTR")
+astro1_d56<-FindMarkers(sn_atlas_processed,ident.1 = "Astrocyte_1_PD_B5-6", ident.2 = "Astrocyte_1_CTR")
+dan2_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_2_PD_B5-6", ident.2 = "DaN_2_CTR")
+dan1_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_1_PD_B5-6", ident.2 = "DaN_1_CTR")
+dan0_d56<-FindMarkers(sn_atlas_processed,ident.1 = "DaN_0_PD_B5-6", ident.2 = "DaN_0_CTR")
+
+deg_FC1andPadj1<-data.frame(celltype=c("Astrocyte_0","Astrocyte_1","Astrocyte_2","Astrocyte_3","DaN_0","DaN_1","DaN_2","DaN_3","GABA","Microglia_0","Microglia_1","Microglia_2","ODC_0","ODC_1","ODC_2","OPC","Tcells"),deg=c(length(astro0_d56[abs(astro0_d56$avg_log2FC)>=1 & astro0_d56$p_val_adj<=0.1,1]), length(astro1_d56[abs(astro1_d56$avg_log2FC)>=1 & astro1_d56$p_val_adj<=0.1,1]), 0, length(astro3_d56[abs(astro3_d56$avg_log2FC)>=1 & astro3_d56$p_val_adj<=0.1,1]), length(dan0_d56[abs(dan0_d56$avg_log2FC)>=1 & dan0_d56$p_val_adj<=0.1,1]), length(dan1_d56[abs(dan1_d56$avg_log2FC)>=1 & dan1_d56$p_val_adj<=0.1,1]), length(dan2_d56[abs(dan2_d56$avg_log2FC)>=1 & dan2_d56$p_val_adj<=0.1,1]), 0, length(gaba_d56[abs(gaba_d56$avg_log2FC)>=1 & gaba_d56$p_val_adj<=0.1,1]), length(micro0_d56[abs(micro0_d56$avg_log2FC)>=1 & micro0_d56$p_val_adj<=0.1,1]), length(micro1_d56[abs(micro1_d56$avg_log2FC)>=1 & micro1_d56$p_val_adj<=0.1,1]), length(micro2_d56[abs(micro2_d56$avg_log2FC)>=1 & micro2_d56$p_val_adj<=0.1,1]), length(odc0_d56[abs(odc0_d56$avg_log2FC)>=1 & odc0_d56$p_val_adj<=0.1,1]), length(odc1_d56[abs(odc1_d56$avg_log2FC)>=1 & odc1_d56$p_val_adj<=0.1,1]),  length(odc2_d56[abs(odc2_d56$avg_log2FC)>=1 & odc2_d56$p_val_adj<=0.1,1]),  length(opc_d56[abs(opc_d56$avg_log2FC)>=1 & opc_d56$p_val_adj<=0.1,1]),  length(tcell_d56[abs(tcell_d56$avg_log2FC)>=1 & tcell_d56$p_val_adj<=0.1,1])))
+
+
 ```
 
 ### Pathway analysis
+
+```{r GOenrich_cellType, echo=TRUE}
+library(topGO)
+
+xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
+allGenes <- unique(unlist(xx))
+
+listGenesDE1<-as.character(gene_module_df_sde_cl0_dt$id)
+listGenesDE1_fdr01<-as.character(gene_module_df_sde_cl0_dt[gene_module_df_sde_cl0_dt$module==1,1])
+universeGenes<-as.character(allGenes[allGenes%in%listGenesDE1])
+geneList <- factor(as.integer(universeGenes %in% listGenesDE1_fdr01))
+names(geneList)<-universeGenes
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              nodeSize = 10,
+              annot = annFUN.org, 
+              mapping = "org.Hs.eg.db",
+              ID = "symbol")
+GOenrich<-runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resGO_sde_dan_cl0_M1 <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
+
+
+```
 
 
 ### Pseudotime analysis for each cell type
