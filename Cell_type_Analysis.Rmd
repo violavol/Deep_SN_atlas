@@ -218,6 +218,19 @@ ggplot(data=prop_df_ctr_pd56, aes(x=Var1, y=prop, fill=Var2)) +
 dev.off()
 
 
+props.data <- getTransformedProps(clusters=sn_atlas_processed_tmp$CellSubType, sample=sn_atlas_processed_tmp$Sample_v2,
+                                  transform="logit")
+df<-data.frame(props.data$Proportions)
+df$disease<-ifelse(df$sample=="15_013" | df$sample=="PD_792" | df$sample=="18_005" | df$sample=="PD_714" | df$sample=="PD_816","PD56","CTR")
+
+pdf("proportion_changes_propeller.pdf",10,3)
+ggplot(df, aes(x=clusters, y=Freq, color=disease)) +
+     geom_boxplot(position=position_dodge(0.8))+
+     geom_jitter(position=position_dodge(0.8))+
+     scale_color_manual(values=c("mediumorchid","skyblue"))+
+     theme(axis.text.x = element_text( color = "black",size = 10, angle = 45,hjust=1))
+dev.off()
+
 ```
 
 ### Find DEGs CTR vs PD within each cell type
@@ -307,7 +320,37 @@ jaccard <- function(a, b) {
     return (intersection/union)
 }
 
-
+jac_ind<-data.frame(cellType=c("Astrocyte_0","Astrocyte_1","Astrocyte_3","DaN_0","DaN_1","DaN_2","GABA","Microglia_0","Microglia_1","Microglia_2","ODC_0","ODC_1","ODC_2","OPC","Tcells"),
+JS_ILBD34_PD34=c(jaccard(deg_FC1andPadj05_ILBD34_genes$Astrocyte_0, deg_FC1andPadj05_PD34_genes$Astrocyte_0),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Astrocyte_1, deg_FC1andPadj05_PD34_genes$Astrocyte_1),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Astrocyte_3, deg_FC1andPadj05_PD34_genes$Astrocyte_3),
+jaccard(deg_FC1andPadj05_ILBD34_genes$DaN_0, deg_FC1andPadj05_PD34_genes$DaN_0),
+jaccard(deg_FC1andPadj05_ILBD34_genes$DaN_1, deg_FC1andPadj05_PD34_genes$DaN_1),
+jaccard(deg_FC1andPadj05_ILBD34_genes$DaN_2, deg_FC1andPadj05_PD34_genes$DaN_2),
+jaccard(deg_FC1andPadj05_ILBD34_genes$GABA, deg_FC1andPadj05_PD34_genes$GABA),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Microglia_0, deg_FC1andPadj05_PD34_genes$Microglia_0),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Microglia_1, deg_FC1andPadj05_PD34_genes$Microglia_1),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Microglia_2, deg_FC1andPadj05_PD34_genes$Microglia_2),
+jaccard(deg_FC1andPadj05_ILBD34_genes$ODC_0, deg_FC1andPadj05_PD34_genes$ODC_0),
+jaccard(deg_FC1andPadj05_ILBD34_genes$ODC_1, deg_FC1andPadj05_PD34_genes$ODC_1),
+jaccard(deg_FC1andPadj05_ILBD34_genes$ODC_2, deg_FC1andPadj05_PD34_genes$ODC_2),
+jaccard(deg_FC1andPadj05_ILBD34_genes$OPC, deg_FC1andPadj05_PD34_genes$OPC),
+jaccard(deg_FC1andPadj05_ILBD34_genes$Tcell, deg_FC1andPadj05_PD34_genes$Tcell)),
+JS_PD34_PD56=c(jaccard(deg_FC1andPadj05_PD56_genes$Astrocyte_0, deg_FC1andPadj05_PD34_genes$Astrocyte_0),
+jaccard(deg_FC1andPadj05_PD56_genes$Astrocyte_1, deg_FC1andPadj05_PD34_genes$Astrocyte_1),
+jaccard(deg_FC1andPadj05_PD56_genes$Astrocyte_3, deg_FC1andPadj05_PD34_genes$Astrocyte_3),
+jaccard(deg_FC1andPadj05_PD56_genes$DaN_0, deg_FC1andPadj05_PD34_genes$DaN_0),
+jaccard(deg_FC1andPadj05_PD56_genes$DaN_1, deg_FC1andPadj05_PD34_genes$DaN_1),
+jaccard(deg_FC1andPadj05_PD56_genes$DaN_2, deg_FC1andPadj05_PD34_genes$DaN_2),
+jaccard(deg_FC1andPadj05_PD56_genes$GABA, deg_FC1andPadj05_PD34_genes$GABA),
+jaccard(deg_FC1andPadj05_PD56_genes$Microglia_0, deg_FC1andPadj05_PD34_genes$Microglia_0),
+jaccard(deg_FC1andPadj05_PD56_genes$Microglia_1, deg_FC1andPadj05_PD34_genes$Microglia_1),
+jaccard(deg_FC1andPadj05_PD56_genes$Microglia_2, deg_FC1andPadj05_PD34_genes$Microglia_2),
+jaccard(deg_FC1andPadj05_PD56_genes$ODC_0, deg_FC1andPadj05_PD34_genes$ODC_0),
+jaccard(deg_FC1andPadj05_PD56_genes$ODC_1, deg_FC1andPadj05_PD34_genes$ODC_1),
+jaccard(deg_FC1andPadj05_PD56_genes$ODC_2, deg_FC1andPadj05_PD34_genes$ODC_2),
+jaccard(deg_FC1andPadj05_PD56_genes$OPC, deg_FC1andPadj05_PD34_genes$OPC),
+jaccard(deg_FC1andPadj05_PD56_genes$Tcell, deg_FC1andPadj05_PD34_genes$Tcell)))
 
 
 ```
@@ -320,8 +363,8 @@ library(topGO)
 xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
 allGenes <- unique(unlist(xx))
 
-listGenesDE1<-as.character(gene_module_df_sde_cl0_dt$id)
-listGenesDE1_fdr01<-as.character(gene_module_df_sde_cl0_dt[gene_module_df_sde_cl0_dt$module==1,1])
+listGenesDE1<-as.character(rownames(df_w_test_level1[order(-df_w_test_level1$Astrocyte),])[1:15000])
+listGenesDE1_fdr01<-as.character(deg_FC1andPadj1_genes_UP$Astrocyte_0)
 universeGenes<-as.character(allGenes[allGenes%in%listGenesDE1])
 geneList <- factor(as.integer(universeGenes %in% listGenesDE1_fdr01))
 names(geneList)<-universeGenes
@@ -333,7 +376,7 @@ GOdata <- new("topGOdata",
               mapping = "org.Hs.eg.db",
               ID = "symbol")
 GOenrich<-runTest(GOdata, algorithm = "classic", statistic = "fisher")
-resGO_sde_dan_cl0_M1 <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
+resGO_deg_pd56_astrocyte0_up <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
 
 
 ```
@@ -341,8 +384,12 @@ resGO_sde_dan_cl0_M1 <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic"
 
 ### Pseudotime analysis for each cell type
 
+```{r pseudotime_cellType, echo=TRUE}
+
+
+```
 
 ### Cell-cell communication analysis
 
 
-### Network analysis
+### Coexpression network analysis
