@@ -429,6 +429,40 @@ meta_toplot$ps<-pseudotime_DaNs_seuratIntegration_PC40res02[,2]
 ggplot(meta_toplot, aes(x=ps, fill=disease)) +
      geom_density(alpha=.5) + theme_bw()
 
+# find DE genes along pseudotime (switchDE and/or monocle)
+
+chip2_counts<-genesALL_DaN
+tmp<-prot_cod[match(rownames(chip2_counts),prot_cod[,1]),]
+tmp<-tmp[!duplicated(tmp[,1]),]
+chip2_counts_match<-chip2_counts[match(tmp[,1],rownames(chip2_counts)),]
+rownames(chip2_counts_match)<-tmp[,1]
+
+chip2_counts_match_step1<-chip2_counts_match/(tmp$Gene_Length/1000)
+chip2_counts_match_step1[is.na(chip2_counts_match_step1)]<-0
+chip2_counts_match_step2<-colSums(chip2_counts_match_step1)
+chip2_counts_match_step3<-chip2_counts_match_step2/1000000
+chip2_counts_match_step4 <-chip2_counts_match_step1/chip2_counts_match_step3
+SN_TPM<-chip2_counts_match_step4
+SN_TPM_log<-log(SN_TPM+1)
+
+SN_TPM_log_red<-SN_TPM_log[,names(pseud_dan)]
+X_filtered <- SN_TPM_log_red[rowMeans(SN_TPM_log_red) > 0.1 & rowMeans(SN_TPM_log_red > 0) > 0.2,]
+sde_dan <- switchde(X_filtered, pseud_dan)
+sde_dan <-arrange(sde_dan,qval)
+
+sde_dan<-sde_dan[sde_dan$qval<0.01 & abs(sde_dan$k)>0.03,]
+ppi_net_sde_dan<-ppi_net[ppi_net[,1]%in%sde_dan$gene & ppi_net[,2]%in%sde_dan$gene ,]
+ppi_net_sde_dan_genes<-unique(c(as.character(ppi_net_sde_dan[,1]),as.character(ppi_net_sde_dan[,2])))
+
+net_1 <- graph_from_data_frame(d= ppi_net_sde_dan, vertices= ppi_net_sde_dan_genes, directed=F)
+cl_net_1<-cluster_louvain(net_1)
+memb_net_1<-as.matrix(membership(cl_net_1))
+
+memb_net_1_df<-data.frame(id=rownames(memb_net_1),module=memb_net_1)
+table(memb_net_1_df$module) #tmp<-read.delim("PPImodules_PPInetwork_switchDE_DAN_q01_k02")
+
+### ODCs:
+
 
 ```
 
