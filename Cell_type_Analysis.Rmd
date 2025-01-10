@@ -386,6 +386,49 @@ resGO_deg_pd56_astrocyte0_up <- GenTable(GOdata, classic = GOenrich, ranksOf = "
 
 ```{r pseudotime_cellType, echo=TRUE}
 
+### DaNs:
+library(monocle3)
+
+genesALL_DaN<-read.delim("genesExp_DaNs_seuratIntegration_PC40res02",h=T)
+genesALL_DaN<-as.matrix(genesALL_DaN)
+metadataALL_DaN<-read.delim("metadata_DaNs_seuratIntegration_PC40res02",h=T)
+
+gene_annotation<-data.frame(gene_short_name=rownames(genesALL_DaN),genes=rownames(genesALL_DaN))
+rownames(gene_annotation)<-rownames(genesALL_DaN)
+
+cds_dan <- new_cell_data_set(genesALL_DaN,
+                             cell_metadata = metadataALL_DaN,
+                             gene_metadata = gene_annotation)
+
+cds_dan <- preprocess_cds(cds_dan, num_dim = 3)
+
+cds_dan <- reduce_dimension(cds_dan)
+cds_dan <- cluster_cells(cds_dan, resolution=1e-5)
+cds_dan <- learn_graph(cds_dan)
+
+plot_cells(cds_dan, color_cells_by = "Disease",label_branch_points = F,label_roots = F,label_leaves = F, cell_size=1)
+
+cds_dan <- order_cells(cds_dan)
+plot_cells(cds_dan, color_cells_by = "pseudotime",label_branch_points = F,label_roots = F,label_leaves = F, cell_size=1)
+
+
+# density plot
+
+pseud_dan<-pseudotime(cds_dan)
+pseud_dan<-pseud_dan[is.finite(pseud_dan)]
+metadataALL_DaN_filt<-metadataALL_DaN[rownames(metadataALL_DaN)%in%names(pseud_dan),]
+metadataALL_DaN_filt$pseudotime<-pseud_dan
+
+ggplot(metadataALL_DaN_filt, aes(x=pseudotime, fill=Disease)) +
+    geom_density(alpha=.5) + theme_bw()
+
+# alternatively:
+pseudotime_DaNs_seuratIntegration_PC40res02<-read.delim("pseudotime_DaNs_seuratIntegration_PC40res02",h=F)
+pseudotime_DaNs_seuratIntegration_PC40res02<-pseudotime_DaNs_seuratIntegration_PC40res02[match(meta_toplot$id,pseudotime_DaNs_seuratIntegration_PC40res02[,1]),]
+meta_toplot$ps<-pseudotime_DaNs_seuratIntegration_PC40res02[,2]
+ggplot(meta_toplot, aes(x=ps, fill=disease)) +
+     geom_density(alpha=.5) + theme_bw()
+
 
 ```
 
