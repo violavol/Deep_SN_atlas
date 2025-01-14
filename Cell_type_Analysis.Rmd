@@ -429,6 +429,17 @@ meta_toplot$ps<-pseudotime_DaNs_seuratIntegration_PC40res02[,2]
 ggplot(meta_toplot, aes(x=ps, fill=disease)) +
      geom_density(alpha=.5) + theme_bw()
 
+# correlation with slingshot pseudotime:
+# use sn_atlas_processed (with all cell types) and run Seurat classical pipeline, then subset only DaNs and run slingshot
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellType=="DaN")
+sce_dans <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
+sce_dans <- slingshot(sce_dans, reducedDim = 'UMAP', clusterLabels = 'Disease')
+meta_toplot<-data.frame(ps=sce_dans$slingPseudotime_1,disease=sce_dans$Disease,cellt=sce_dans$CellSubType)
+ggplot(meta_toplot, aes(x=ps, fill=disease)) +
+geom_density(alpha=.5) + theme_bw()
+
+cor.test(sce_dans$slingPseudotime_1,pseudotime_DaNs_seuratIntegration_PC40res02[,2]) # corr = 0.61
+
 # find DE genes along pseudotime (switchDE and/or monocle)
 
 chip2_counts<-genesALL_DaN
