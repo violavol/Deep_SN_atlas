@@ -429,18 +429,8 @@ meta_toplot$ps<-pseudotime_DaNs_seuratIntegration_PC40res02[,2]
 ggplot(meta_toplot, aes(x=ps, fill=disease)) +
      geom_density(alpha=.5) + theme_bw()
 
-# correlation with slingshot pseudotime:
-# use sn_atlas_processed (with all cell types) and run Seurat classical pipeline, then subset only DaNs and run slingshot
-sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellType=="DaN")
-sce_dans <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
-sce_dans <- slingshot(sce_dans, reducedDim = 'UMAP', clusterLabels = 'Disease')
-meta_toplot<-data.frame(ps=sce_dans$slingPseudotime_1,disease=sce_dans$Disease,cellt=sce_dans$CellSubType)
-ggplot(meta_toplot, aes(x=ps, fill=disease)) +
-geom_density(alpha=.5) + theme_bw()
 
-cor.test(sce_dans$slingPseudotime_1,pseudotime_DaNs_seuratIntegration_PC40res02[,2]) # corr = 0.61
-
-# find DE genes along pseudotime (switchDE and/or monocle)
+# find DE genes along pseudotime (switchDE)
 
 chip2_counts<-genesALL_DaN
 tmp<-prot_cod[match(rownames(chip2_counts),prot_cod[,1]),]
@@ -471,6 +461,46 @@ memb_net_1<-as.matrix(membership(cl_net_1))
 
 memb_net_1_df<-data.frame(id=rownames(memb_net_1),module=memb_net_1)
 table(memb_net_1_df$module) #tmp<-read.delim("PPImodules_PPInetwork_switchDE_DAN_q01_k02")
+
+
+# correlation with slingshot pseudotime:
+# use sn_atlas_processed (with all cell types) and run Seurat classical pipeline, then subset only DaNs and run slingshot
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellType=="DaN")
+sce_dans <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
+sce_dans <- slingshot(sce_dans, reducedDim = 'UMAP', clusterLabels = 'Disease')
+meta_toplot<-data.frame(ps=sce_dans$slingPseudotime_1,disease=sce_dans$Disease,cellt=sce_dans$CellSubType)
+ggplot(meta_toplot, aes(x=ps, fill=disease)) +
+geom_density(alpha=.5) + theme_bw()
+
+cor.test(sce_dans$slingPseudotime_1,pseudotime_DaNs_seuratIntegration_PC40res02[,2]) # corr = 0.61
+
+# find DE genes along pseudotime (tradeseq)
+# done for DaN_0 and DaN_1 subtypes across all disease condition
+
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellSubType=="DaN_0" | CellSubType=="DaN_1")
+sce_dans <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
+sce_dans <- slingshot(sce_dans, reducedDim = 'UMAP', clusterLabels = 'Disease')
+meta_toplot<-data.frame(ps=sce_dans$slingPseudotime_1,disease=sce_dans$Disease,cellt=sce_dans$CellSubType)
+ggplot(meta_toplot, aes(x=ps, fill=disease)) +
+     geom_density(alpha=.5) + theme_bw()
+
+genes_dans<-as.matrix(GetAssayData(sn_atlas_processed_tmp, slot = "counts"))
+sce_dans01_deg <- fitGAM(genes_dans,sds=SlingshotDataSet(sce_dans))
+dans01_deg_tradeseq <- associationTest(sce_dans01_deg)
+dans01_deg_tradeseqStartEnd <- startVsEndTest(sce_dans01_deg)
+dim(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1>1,])
+[1] 1371    4
+dim(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1< -1,])
+[1] 9381    4
+
+ps_dans01<-cut(sce_dans$slingPseudotime_1,breaks = 3,labels = c("ps_int1","ps_int2","ps_int3"))
+names(ps_dans01)<-colnames(sn_atlas_processed_tmp)
+sn_atlas_processed_tmp$ps_interval<-ps_dans01
+avg_exp_ps_dan01_down<-AverageExpression(object = sn_atlas_processed_tmp, group.by = c('ps_interval'),features = rownames(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1< -1,]))
+avg_exp_ps_dan01_up<-AverageExpression(object = sn_atlas_processed_tmp, group.by = c('ps_interval'),features = rownames(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1> 1,]))
+avg_exp_ps_dan01_all<-rbind(avg_exp_ps_dan01_up$RNA,avg_exp_ps_dan01_down$RNA)
+
+pheatmap::pheatmap(log(test1+1), cluster_rows=F, cluster_cols=F,scale = "row",fontsize=2)
 
 ### ODCs:
 
