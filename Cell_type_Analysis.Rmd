@@ -502,7 +502,50 @@ avg_exp_ps_dan01_all<-rbind(avg_exp_ps_dan01_up$RNA,avg_exp_ps_dan01_down$RNA)
 
 pheatmap::pheatmap(log(test1+1), cluster_rows=F, cluster_cols=F,scale = "row",fontsize=2)
 
+xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
+allGenes <- unique(unlist(xx))
+listGenesDE1<-as.character(rownames(genes_dans))
+listGenesDE1_fdr01<-as.character(rownames(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1< -1,]))
+universeGenes<-as.character(allGenes[allGenes%in%listGenesDE1])
+geneList <- factor(as.integer(universeGenes %in% listGenesDE1_fdr01))
+names(geneList)<-universeGenes
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              nodeSize = 10,
+              annot = annFUN.org, 
+              mapping = "org.Hs.eg.db",
+              ID = "symbol")
+GOenrich<-runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resGO_dans01_deg_tradeseqStartEnd_down <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
+
+
+df_go<-resGO_dans01_deg_tradeseqStartEnd_down[c(3,6,10,21,24,26,30,41,50),c(2,6)]
+df_go$Term<-factor(df_go$Term,levels = as.character(df_go$Term))
+ggplot(data=df_go, aes(x=Term, y=-log(as.numeric(classic)))) +
+     geom_bar(stat="identity", fill="skyblue")+
+     theme_minimal() + coord_flip()
+
+
+
+
 ### ODCs:
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellType=="ODC")
+sn_atlas_processed_tmp <- NormalizeData(sn_atlas_processed_tmp)
+sn_atlas_processed_tmp <- FindVariableFeatures(sn_atlas_processed_tmp, selection.method = "vst", nfeatures = 2000)
+sn_atlas_processed_tmp <- ScaleData(sn_atlas_processed_tmp)
+sn_atlas_processed_tmp <- RunPCA(sn_atlas_processed_tmp, features = VariableFeatures(object = sn_atlas_processed_tmp))
+sn_atlas_processed_tmp <- FindNeighbors(sn_atlas_processed_tmp, dims = 1:30)
+sn_atlas_processed_tmp <- FindClusters(sn_atlas_processed_tmp, resolution = 0.6)
+sn_atlas_processed_tmp <- RunUMAP(sn_atlas_processed_tmp, dims = 1:30)
+sce_odc <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
+sce_odc <- slingshot(sce_odc, reducedDim = 'UMAP', clusterLabels = 'Disease')
+
+
+meta_toplot_odc<-data.frame(ps=sce_odc$slingPseudotime_1,disease=sce_odc$Disease,cellt=sce_odc$CellSubType)
+meta_toplot_odc<-meta_toplot_odc[meta_toplot_odc$cellt=="ODC_2",]
+ggplot(meta_toplot_odc, aes(x=ps, fill=disease)) +
+    geom_density(alpha=.5) + theme_bw()
 
 
 ```
