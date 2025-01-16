@@ -432,21 +432,13 @@ ggplot(meta_toplot, aes(x=ps, fill=disease)) +
 
 # find DE genes along pseudotime (switchDE)
 
-chip2_counts<-genesALL_DaN
-tmp<-prot_cod[match(rownames(chip2_counts),prot_cod[,1]),]
-tmp<-tmp[!duplicated(tmp[,1]),]
-chip2_counts_match<-chip2_counts[match(tmp[,1],rownames(chip2_counts)),]
-rownames(chip2_counts_match)<-tmp[,1]
-
-chip2_counts_match_step1<-chip2_counts_match/(tmp$Gene_Length/1000)
-chip2_counts_match_step1[is.na(chip2_counts_match_step1)]<-0
-chip2_counts_match_step2<-colSums(chip2_counts_match_step1)
-chip2_counts_match_step3<-chip2_counts_match_step2/1000000
-chip2_counts_match_step4 <-chip2_counts_match_step1/chip2_counts_match_step3
-SN_TPM<-chip2_counts_match_step4
-SN_TPM_log<-log(SN_TPM+1)
-
-SN_TPM_log_red<-SN_TPM_log[,names(pseud_dan)]
+prot_cod_len<-read.delim("gene_length",h=T)
+data<-as.matrix(GetAssayData(sn_atlas_processed_tmp, slot = "counts"))
+prot_cod_m<-prot_cod_len[match(rownames(data),prot_cod_len[,1]),]
+data <- sweep(data, 1, STATS = prot_cod_m$Gene_Length/1000, FUN = "/")
+data[is.na(data)]<-0
+data <- sweep(data, 2, STATS = colSums(data)/(10^6), FUN = "/")
+SN_TPM_log_red<-log(data+1)
 X_filtered <- SN_TPM_log_red[rowMeans(SN_TPM_log_red) > 0.1 & rowMeans(SN_TPM_log_red > 0) > 0.2,]
 sde_dan <- switchde(X_filtered, pseud_dan)
 sde_dan <-arrange(sde_dan,qval)
@@ -500,7 +492,7 @@ avg_exp_ps_dan01_down<-AverageExpression(object = sn_atlas_processed_tmp, group.
 avg_exp_ps_dan01_up<-AverageExpression(object = sn_atlas_processed_tmp, group.by = c('ps_interval'),features = rownames(dans01_deg_tradeseqStartEnd[dans01_deg_tradeseqStartEnd$pvalue<0.05 & dans01_deg_tradeseqStartEnd$logFClineage1> 1,]))
 avg_exp_ps_dan01_all<-rbind(avg_exp_ps_dan01_up$RNA,avg_exp_ps_dan01_down$RNA)
 
-pheatmap::pheatmap(log(test1+1), cluster_rows=F, cluster_cols=F,scale = "row",fontsize=2)
+pheatmap::pheatmap(log(avg_exp_ps_dan01_all+1), cluster_rows=F, cluster_cols=F,scale = "row",fontsize=2)
 
 xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
 allGenes <- unique(unlist(xx))
