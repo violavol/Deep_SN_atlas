@@ -211,6 +211,7 @@ plotCellTypeProps(clusters=sn_atlas_processed_tmp$seurat_clusters, sample=sn_atl
 
 sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=Disease=="CTR" | Disease=="PD_B5-6")
 df_tmp<-data.frame(table(sn_atlas_processed_tmp$CellSubType))
+prop_df_ctr_pd56<-data.frame(table(sn_atlas_processed_tmp$CellSubType,sn_atlas_processed_tmp$Disease))
 prop_df_ctr_pd56$prop<-prop_df_ctr_pd56$Freq/df_tmp$Freq*100
 pdf("celltype_prop_CTR_PD56.pdf",6,3)
 ggplot(data=prop_df_ctr_pd56, aes(x=Var1, y=prop, fill=Var2)) +
