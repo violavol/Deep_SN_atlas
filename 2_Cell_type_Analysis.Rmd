@@ -47,7 +47,7 @@ sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
 
 ```
 
-### Find cell type specific gene markers
+### Find cell type specific gene markers (Figure 2)
 
 ```{r gene markers, echo=TRUE}
 
@@ -142,7 +142,7 @@ clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pc
 
 ```
 
-### Prepare for MAGMA analysis
+### Prepare for MAGMA analysis (Figure 2)
 
 ```{r magma, echo=TRUE}
 
@@ -163,7 +163,7 @@ write.table(data.frame(list_gene),file="input_magma_level1_2p",quote=FALSE,row.n
 
 ```
 
-### Cell type-specific PPI networks
+### Cell type-specific PPI networks (Figure 2)
 
 ```{r cellt_PPI, echo=TRUE}
 library(igraph)
@@ -184,7 +184,7 @@ memb_net_dan3top1000ppi_df<-data.frame(id=rownames(memb_net_1),module=memb_net_1
 ```
 
 
-### Changes in cell type proportions
+### Changes in cell type proportions (Figure 3)
 
 ```{r cell_prop, echo=TRUE}
 
@@ -234,7 +234,7 @@ dev.off()
 
 ```
 
-### Find DEGs CTR vs PD within each cell type
+### Find DEGs CTR vs PD within each cell type (Figure 3)
 
 ```{r deg_by_cellType, echo=TRUE}
 
@@ -356,7 +356,7 @@ jaccard(deg_FC1andPadj05_PD56_genes$Tcell, deg_FC1andPadj05_PD34_genes$Tcell)))
 
 ```
 
-### Pathway analysis
+### Pathway analysis (Figure 3)
 
 ```{r GOenrich_cellType, echo=TRUE}
 library(topGO)
@@ -396,11 +396,11 @@ treemapPlot(reducedTerms)
 ```
 
 
-### Pseudotime analysis for each cell type
+### Pseudotime analysis for each cell type (Figure 3)
 
 ```{r pseudotime_cellType, echo=TRUE}
 
-### DaNs:
+## DaNs:
 library(monocle3)
 
 genesALL_DaN<-read.delim("genesExp_DaNs_seuratIntegration_PC40res02",h=T)
@@ -445,6 +445,7 @@ ggplot(meta_toplot, aes(x=ps, fill=disease)) +
 
 
 # find DE genes along pseudotime (switchDE)
+
 
 prot_cod_len<-read.delim("gene_length",h=T)
 data<-as.matrix(GetAssayData(sn_atlas_processed_tmp, slot = "counts"))
@@ -535,7 +536,7 @@ ggplot(data=df_go, aes(x=Term, y=-log(as.numeric(classic)))) +
 
 
 
-### ODCs:
+## ODCs:
 sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellType=="ODC")
 sn_atlas_processed_tmp <- NormalizeData(sn_atlas_processed_tmp)
 sn_atlas_processed_tmp <- FindVariableFeatures(sn_atlas_processed_tmp, selection.method = "vst", nfeatures = 2000)
@@ -621,9 +622,121 @@ tmp$Mod<-c(rep("M1",3),rep("M2",3),rep("M1",3),rep("M2",3),rep("M1",3),rep("M2",
 tmp$classic<-as.numeric(tmp$classic)
 tmp$Term<-factor(tmp$Term,levels = as.character(tmp$Term))
 ggplot(tmp, aes(x = -log(classic), y = Term,fill=Mod)) + geom_bar(stat = "identity") + theme_minimal() + scale_fill_manual(values = c("blue","skyblue")) + theme(axis.text.y  = element_text(hjust=0,face = "bold"))
+
 ```
 
+
+### Isoform Analysis (Figure 3)
+
+```{r isoform, echo=TRUE}
+library(fishpond)
+library(scran)
+library(biomaRt)
+ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://useast.ensembl.org")
+library(tximeta)
+
+coldata<-read.delim("coldata_ALL_CTRandPD56_modified_nfs",h=T,stringsAsFactors=F)
+
+suppressPackageStartupMessages(library(SummarizedExperiment))
+y <- tximeta(coldata,dropInfReps=T)
+
+# diff transcript express
+
+y <- labelKeep(y, minCount = 3, minN = 10)
+y <- y[mcols(y)$keep,]
+set.seed(1)
+assays(y) <- lapply(assays(y), as.matrix) # make dense matrices
+y <- scaleInfReps(y, lengthCorrect=FALSE, sfFun= computeSumFactors)
+y <- swish(y, x="condition",  quiet=TRUE)
+
+# diff isoform usage
+
+iso <- isoformProportions(y)
+iso <- swish(iso, x="condition",nperms=64)
+
+df<-mcols(iso)[,c("log2FC","qvalue","gene","tx_id")]
+
+load("Transcript_expression_allCelltype_CTRandPD56.RData") # to get all data and get number of DTUs
+
+# OPCs to ODCs differentiation using isoform data
+
+load("pseudotime_isoforms_OPC_ODCs_CTRandPD56.RData")
+
+isoform_OPC_ODC2_CTRandPD56<-as.matrix(assays(y)[[2]])
+meta_isoform_OPC_ODC2_CTRandPD56<-data.frame(celltype=y$cellSubType,disease=y$condition,cell=y$Barcode,sample=y$names)
+meta_isoform_OPC_ODC2_CTRandPD56$names<-paste(meta_isoform_OPC_ODC2_CTRandPD56$cell,meta_isoform_OPC_ODC2_CTRandPD56$sample,sep="_")
+colnames(isoform_OPC_ODC2_CTRandPD56)<-meta_isoform_OPC_ODC2_CTRandPD56$names
+rownames(meta_isoform_OPC_ODC2_CTRandPD56)<-meta_isoform_OPC_ODC2_CTRandPD56$names
+
+chip_iso_opc_odc2_ctrpd <- CreateSeuratObject(counts = isoform_OPC_ODC2_CTRandPD56, project = "isoform", min.cells = 0, min.features = 0,meta.data= meta_isoform_OPC_ODC2_CTRandPD56)
+
+# done on controls and pd samples separately
+chip_iso_opc_odc2_ctr <- subset(chip_iso_opc_odc2_ctrpd,subset=disease=="CTR")
+chip_iso_opc_odc2_ctr <- NormalizeData(chip_iso_opc_odc2_ctr)
+chip_iso_opc_odc2_ctr <- FindVariableFeatures(chip_iso_opc_odc2_ctr, selection.method = "vst", nfeatures = 2000)
+
+chip_iso_opc_odc2_ctr <- ScaleData(chip_iso_opc_odc2_ctr)
+chip_iso_opc_odc2_ctr <- RunPCA(chip_iso_opc_odc2_ctr, features = VariableFeatures(object = chip_iso_opc_odc2_ctrpd))
+chip_iso_opc_odc2_ctr <- FindNeighbors(chip_iso_opc_odc2_ctr, dims = 1:10)
+chip_iso_opc_odc2_ctr <- FindClusters(chip_iso_opc_odc2_ctr, resolution = 0.6)
+chip_iso_opc_odc2_ctr <- RunUMAP(chip_iso_opc_odc2_ctr, dims = 1:10)
+
+sce_iso_opc_odc2_ctr <- as.SingleCellExperiment(chip_iso_opc_odc2_ctr, assay = "RNA")
+sce_iso_opc_odc2_ctr <- slingshot(sce_iso_opc_odc2_ctr, reducedDim = 'UMAP', clusterLabels = 'seurat_clusters')
+meta_isoform_OPC_ODC2_CTR<-meta_isoform_OPC_ODC2_CTRandPD56[meta_isoform_OPC_ODC2_CTRandPD56$disease=="CTR",]
+meta_isoform_OPC_ODC2_CTR$ps<-sce_iso_opc_odc2_ctr$slingPseudotime_1
+
+ggplot(meta_isoform_OPC_ODC2_CTR, aes(x=ps, fill=celltype)) +
+    geom_density(alpha=.5) + theme_bw()
+
+isoform_OPC_ODC2_CTR<-as.matrix(GetAssayData(chip_iso_opc_odc2_ctr, slot = "counts"))
+isoform_OPC_ODC2_CTR<-log(isoform_OPC_ODC2_CTR+1)
+sde_iso_opc_odc2_ctr <- switchde(isoform_OPC_ODC2_CTR, sce_iso_opc_odc2_ctr$slingPseudotime_1)
+
+pd_risk_opc_isoform<-read.table("pd_50k_gene_and_iso_opc.gsa.sets.genes.out",h=T)
+pd_risk_odc2_isoform<-read.table("pd_50k_gene2000_and_iso_odc2_only.gsa.sets.genes.out",h=T)
+
+# test enrichment of pd risk isoforms in OPCs and ODC_2 along differentiation trajectory:
+
+
+meta_isoform_OPC_ODC_CTR_tmp<-meta_isoform_OPC_ODC2_CTRandPD56[meta_isoform_OPC_ODC2_CTRandPD56$celltype=="OPC",]
+meta_isoform_OPC_ODC_CTR_tmp <-meta_isoform_OPC_ODC_CTR_tmp[order(meta_isoform_OPC_ODC_CTR_tmp$ps),]
+meta_isoform_OPC_ODC_CTR_tmp<-meta_isoform_OPC_ODC_CTR_tmp[meta_isoform_OPC_ODC_CTR_tmp$ps>10,] # opcs subset
+meta_isoform_OPC_ODC_CTR_tmp$set<-ifelse(meta_isoform_OPC_ODC_CTR_tmp$ps<15,"late","early")
+chip_iso_opc_odc_ctr_tmp<-chip_iso_opc_odc2_ctr[,colnames(chip_iso_opc_odc2_ctr)%in%meta_isoform_OPC_ODC_CTR_tmp$names]
+chip_iso_opc_odc_ctr_tmp$set<-meta_isoform_OPC_ODC_CTR_tmp$set
+
+Idents(chip_iso_opc_odc_ctr_tmp)<-chip_iso_opc_odc_ctr_tmp$set
+opc_latevsearly_ctr<-FindMarkers(chip_iso_opc_odc_ctr_tmp,ident.1 = "late", ident.2 = "early")
+
+dim(opc_latevsearly_ctr[opc_latevsearly_ctr$p_val_adj<=0.05,])
+tmp<-prot_cod[match(rownames(opc_latevsearly_ctr),prot_cod[,2]),]
+opc_latevsearly_ctr$id<-tmp$Gene.name
+
+# GO enrichment for early and late genes along differentiation trajectory:
+xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
+allGenes <- unique(unlist(xx))
+listGenesDE1<-as.character(rownames(Wtest_counts_L1[order(Wtest_counts_L1$OPC),])[1:5000])
+listGenesDE1_fdr01<-as.character(opc_latevsearly_ctr[opc_latevsearly_ctr$p_val<=0.05 & opc_latevsearly_ctr$avg_log2FC>0,6])
+universeGenes<-as.character(allGenes[allGenes%in%listGenesDE1])
+geneList <- factor(as.integer(universeGenes %in% listGenesDE1_fdr01))
+names(geneList)<-universeGenes
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              nodeSize = 10,
+              annot = annFUN.org, 
+              mapping = "org.Hs.eg.db",
+              ID = "symbol")
+GOenrich<-runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resGO_opc_latevsearly_ctr_up <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
+
+```
+
+
 ### Cell-cell communication analysis (Figure 4)
+
+```{r cellcomm, echo=TRUE}
 
 library(CellChat)
 library(patchwork)
@@ -753,12 +866,41 @@ if(length(tmp6)==0){
 }
 p_test
 
+```
 
 
+### Cell state transition DaN_1 to DaN_3 (Figure 5)
 
+```{r state_transition, echo=TRUE}
+
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=CellSubType=="DaN_1" | CellSubType=="DaN_3")
+sn_atlas_processed_tmp<-subset(sn_atlas_processed,subset=Disease=="CTR")
+sce_dans <- as.SingleCellExperiment(sn_atlas_processed_tmp, assay = "RNA")
+sce_dans <- slingshot(sce_dans, reducedDim = 'UMAP', clusterLabels = 'CellSubType')
+meta_toplot<-data.frame(ps=sce_dans$slingPseudotime_1,cellt=sce_dans$CellSubType)
+ggplot(meta_toplot, aes(x=ps, fill=cellt)) +
+geom_density(alpha=.5) + theme_bw()
+
+prot_cod_len<-read.delim("gene_length",h=T)
+data<-as.matrix(GetAssayData(sn_atlas_processed_tmp, slot = "counts"))
+prot_cod_m<-prot_cod_len[match(rownames(data),prot_cod_len[,1]),]
+data <- sweep(data, 1, STATS = prot_cod_m$Gene_Length/1000, FUN = "/")
+data[is.na(data)]<-0
+data <- sweep(data, 2, STATS = colSums(data)/(10^6), FUN = "/")
+SN_TPM_log_red<-log(data+1)
+X_filtered <- SN_TPM_log_red[rowMeans(SN_TPM_log_red) > 0.1 & rowMeans(SN_TPM_log_red > 0) > 0.2,]
+sde_dan <- switchde(X_filtered, sce_dans$slingPseudotime_1)
+sde_dan <-arrange(sde_dan,qval)
+
+sde_dan<-sde_dan[sde_dan$qval<0.01 & abs(sde_dan$k)>0.03,]
+
+
+```
 
 
 ### Coexpression network analysis
+
+```{r coexpr, echo=TRUE}
 
 data_dan3<-as.matrix(GetAssayData(sn_atlas_DAN3, slot = "counts"))
 results.dan3=compute.network(expr.data = data_dan3,gene.names = rownames(data_dan3),clustering = "direct")
@@ -777,7 +919,7 @@ cl_net<-cluster_louvain(net_dan3)
 memb_net_dan3<-as.matrix(membership(cl_net))
 memb_net_dan3_df<-data.frame(id=rownames(memb_net_dan3),module=memb_net_dan3)
 
-
+```
 
 
 
