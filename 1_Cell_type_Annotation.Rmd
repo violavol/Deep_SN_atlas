@@ -31,6 +31,14 @@ library(Seurat)
 devtools::install_github("rpolicastro/scProportionTest")
 library("scProportionTest")
 library(RColorBrewer)
+
+#ODC: "cadetblue1","deepskyblue3","blue4"
+#Micro:  "green3","palegreen","green4"
+#Astro: "salmon1","red4","firebrick1","peachpuff"
+#DaN: "lightgoldenrod1","goldenrod","tan1","darkorange3"
+
+#cols = c("orange","gold","darkolivegreen3","dodgerblue","purple") # disease stage
+
 ```
 
 
