@@ -40,7 +40,7 @@ library(RColorBrewer)
 load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_unprocessed.RData")
 ```
 
-### DATA INTEGRATION BY DISEASE
+### DATA INTEGRATION BY DISEASE (Figure 1)
 
 # Seurat fast integration using reciprocal PCA (see https://satijalab.org/seurat/articles/integration_rpca)
 
