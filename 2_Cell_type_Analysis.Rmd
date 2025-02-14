@@ -1104,6 +1104,21 @@ ggplot(GO_toPlot,aes(x = Module , y = Term)) +
     scale_color_manual(values=c("orange4"))+ theme(axis.text.y = element_text( color = "black",size = 10)) + theme(axis.text.x = element_text( color = "black",size = 10, angle = 90,hjust=1)) + guides(colour = guide_legend(override.aes = list(size=8))) 
 
 
+
+pseud_dan_range<-cut(meta_toplot$ps, c(0, 5,10,15,20), include.lowest=TRUE)
+sn_atlas_processed_tmp$ps_range<-pseud_dan_range
+
+dans_ras<-AverageExpression(sn_atlas_processed_tmp,features = ras[,1],group.by = "ps_range")
+dans_ras<-data.frame(dans_ras$RNA)
+dans_ras_melt<-melt(dans_ras)
+
+ggplot(dans_ras_melt, aes(x = gene, y = type, fill = corr)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  scale_fill_gradient(low = "blue",mid="white", high = "red")
+
+
 ```
 
 
