@@ -1112,7 +1112,7 @@ dans_ras<-AverageExpression(sn_atlas_processed_tmp,features = ras[,1],group.by =
 dans_ras<-data.frame(dans_ras$RNA)
 dans_ras_melt<-melt(dans_ras)
 
-ggplot(dans_ras_melt, aes(x = gene, y = type, fill = corr)) +
+ggplot(dans_ras_melt, aes(x = gene, y = ps_range, fill = value)) +
   geom_tile(color = "white",
             lwd = 1.5,
             linetype = 1) +
@@ -1143,6 +1143,15 @@ cl_net<-cluster_louvain(net_dan3)
 memb_net_dan3<-as.matrix(membership(cl_net))
 memb_net_dan3_df<-data.frame(id=rownames(memb_net_dan3),module=memb_net_dan3)
 
+
+
+# GLP1R correlations
+
+coexp_dan3_08_glp1r <- coexp_dan3_08[coexp_dan3_08[,1]=="GLP1R" | coexp_dan3_08[,2]=="GLP1R",]
+coexp_dan3_08_glp1r_pos <- coexp_dan3_08_glp1r[coexp_dan3_08_glp1r$corr > 0,]
+coexp_dan3_08_glp1r_neg <- coexp_dan3_08_glp1r[coexp_dan3_08_glp1r$corr < 0,]
+
+
 ```
 
 
@@ -1164,7 +1173,7 @@ regulonActivity_byCellType <- sapply(split(rownames(cellInfo), cellInfo[,1]),
 
 
 regulonActivity_byCellType_Scaled <- t(scale(t(regulonActivity_byCellType), center = T, scale=T))
-ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled[1:160,], name="Regulon activity",row_names_gp =gpar(fontsize = 5))
+ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled, name="Regulon activity",row_names_gp =gpar(fontsize = 5))
 
 topRegulators <- reshape2::melt(regulonActivity_byCellType_Scaled)
 colnames(topRegulators) <- c("Regulon", "CellType", "RelativeActivity")
