@@ -1157,7 +1157,9 @@ coexp_dan3_08_glp1r_neg <- coexp_dan3_08_glp1r[coexp_dan3_08_glp1r$corr < 0,]
 
 
 
-# SCENIC
+# SCENIC (Figure 6)
+
+```{r scenic, echo=TRUE}
 
 t<-subset(sn_atlas_dans,subset=Disease=="CTR")
 meta_dans <-as.data.frame(t@meta.data)
@@ -1179,7 +1181,7 @@ topRegulators <- reshape2::melt(regulonActivity_byCellType_Scaled)
 colnames(topRegulators) <- c("Regulon", "CellType", "RelativeActivity")
 topRegulators <- topRegulators[which(topRegulators$RelativeActivity>0),]
 
-
+```
 
 
 
