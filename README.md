@@ -1,4 +1,4 @@
-# Analysis of a deep transcriptomic atlas of the substantia nigra in Parkinson's disease
+# A Parkinson’s nigral atlas reveals a molecular overlap with Type-2 Diabetes.
 
 This repository contains code and data to reproduce all main figures and analysis in the manuscript.
 
@@ -13,6 +13,7 @@ R data files:
 ## Analyses
 
 - Cell type annotation using data integration analysis
+- Genetic risk enrichment
 - Analysis of changes in cell type proportions between cases and controls
 - Cell type-specific DEGs between cases and controls
 - Pathway and network analysis
