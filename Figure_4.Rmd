@@ -1,0 +1,182 @@
+---
+title: "Figure_4"
+author: "Viola Volpato"
+date: 'Last update: `r date()`'
+output:
+  html_document:
+    fig_height: 5
+    fig_width: 5
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+      toc_depth: 5
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+
+```{r clean r session, include=FALSE}
+rm(list = ls())
+```
+
+### Install and load library
+
+```{r load lib, echo=TRUE}
+library(ggplot2)
+library(Seurat)
+library(RColorBrewer)
+```
+
+
+### Load data
+
+```{r get raw data, echo=TRUE}
+load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+
+sn_atlas_processed <- NormalizeData(sn_atlas_processed)
+sn_atlas_processed <- FindVariableFeatures(sn_atlas_processed, selection.method = "vst", nfeatures = 2000)
+sn_atlas_processed <- ScaleData(sn_atlas_processed)
+sn_atlas_processed <- RunPCA(sn_atlas_processed, features = VariableFeatures(object = sn_atlas_processed))
+sn_atlas_processed <- FindNeighbors(sn_atlas_processed, dims = 1:10)
+sn_atlas_processed <- FindClusters(sn_atlas_processed, resolution = 0.6)
+sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
+
+```
+
+### Cell-cell communication analysis (Figure 4)
+
+```{r cellcomm, echo=TRUE}
+
+library(CellChat)
+library(patchwork)
+
+sn_atlas_ctr<-subset(sn_atlas_processed,subset=Disease=="CTR")
+sn_atlas_pd<-subset(sn_atlas_processed,subset=Disease=="PD_B5-6")
+
+Idents(sn_atlas_ctr)<-sn_atlas_ctr$CellSubType
+sn_atlas_ctr_downsample<-subset(x = sn_atlas_ctr, downsample = 150)
+Idents(sn_atlas_pd)<-sn_atlas_pd$CellSubType
+sn_atlas_pd_downsample<-subset(x = sn_atlas_pd, downsample = 150)
+
+data.input <- GetAssayData(sn_atlas_ctr_downsample, assay = "RNA", slot = "data") 
+labels <-sn_atlas_ctr_downsample$CellSubType
+names(labels)<-colnames(data.input)
+meta <- data.frame(group = labels, row.names = names(labels))
+cellchat.CTR <- createCellChat(object = data.input, meta = meta, group.by = "group")
+
+data.input <- GetAssayData(sn_atlas_pd_downsample, assay = "RNA", slot = "data") 
+labels <-sn_atlas_pd_downsample$CellSubType
+names(labels)<-colnames(data.input)
+meta <- data.frame(group = labels, row.names = names(labels))
+cellchat.PD <- createCellChat(object = data.input, meta = meta, group.by = "group")
+
+
+# to run on each dataset separately
+
+CellChatDB <- CellChatDB.human
+CellChatDB.use <- CellChatDB
+cellchat.CTR@DB <- CellChatDB.use
+cellchat.PD@DB <- CellChatDB.use
+
+cellchat.CTR <- subsetData(cellchat.CTR)
+cellchat.PD <- subsetData(cellchat.PD)
+cellchat.CTR <- identifyOverExpressedGenes(cellchat.CTR)
+cellchat.PD <- identifyOverExpressedGenes(cellchat.PD)
+
+
+cellchat.CTR <- identifyOverExpressedInteractions(cellchat.CTR)
+cellchat.PD <- identifyOverExpressedInteractions(cellchat.PD)
+
+
+#cellchat.CTR <- projectData(cellchat.CTR, PPI.human)
+#cellchat.PD <- projectData(cellchat.PD, PPI.human)
+
+cellchat.CTR <- computeCommunProb(cellchat.CTR,raw.use=TRUE,population.size = FALSE)
+cellchat.PD <- computeCommunProb(cellchat.PD,raw.use=TRUE,population.size = FALSE)
+
+cellchat.CTR <- filterCommunication(cellchat.CTR, min.cells = 10)
+df.net.CTR <- subsetCommunication(cellchat.CTR)
+df.netP.CTR <- subsetCommunication(cellchat.CTR,slot.name = "netP")
+write.table(df.net.CTR,"SNatlas_communicationNetwork_results_CTR_downsampled",quote=F,sep="\t",row.names=F)
+write.table(df.netP.CTR,"SNatlas_communicationNetwork_signalingPath_results_CTR_downsampled",quote=F,sep="\t",row.names=F)
+cellchat.CTR <- computeCommunProbPathway(cellchat.CTR)
+cellchat.CTR <- aggregateNet(cellchat.CTR)
+
+cellchat.PD <- filterCommunication(cellchat.PD, min.cells = 10)
+df.net.PD <- subsetCommunication(cellchat.PD)
+df.netP.PD <- subsetCommunication(cellchat.PD,slot.name = "netP")
+write.table(df.net.PD,"SNatlas_communicationNetwork_results_PD_downsampled",quote=F,sep="\t",row.names=F)
+write.table(df.netP.PD,"SNatlas_communicationNetwork_signalingPath_results_PD_downsampled",quote=F,sep="\t",row.names=F)
+cellchat.PD <- computeCommunProbPathway(cellchat.PD)
+cellchat.PD <- aggregateNet(cellchat.PD)
+
+
+cellchat.CTR <- netAnalysis_computeCentrality(cellchat.CTR, slot.name = "netP")
+netAnalysis_signalingRole_heatmap(cellchat.CTR, pattern = "outgoing",font.size=4,height=20,width=6)
+netAnalysis_signalingRole_heatmap(cellchat.CTR, pattern = "incoming",font.size=4,height=20,width=6)
+
+cellchat.PD <- netAnalysis_computeCentrality(cellchat.PD, slot.name = "netP")
+netAnalysis_signalingRole_heatmap(cellchat.PD, pattern = "outgoing",font.size=4,height=20,width=6)
+netAnalysis_signalingRole_heatmap(cellchat.PD, pattern = "incoming",font.size=4,height=20,width=6)
+
+# to merge
+
+group.new = levels(cellchat.CTR@idents)
+cellchat.PD <- liftCellChat(cellchat.PD, group.new)
+object.list <- list(CTR = cellchat.CTR, PD = cellchat.PD)
+cellchat <- mergeCellChat(object.list, add.names = names(object.list))
+
+gg1 <- compareInteractions(cellchat, show.legend = F, group = c(1,2))
+gg2 <- compareInteractions(cellchat, show.legend = F, group = c(1,2), measure = "weight")
+gg1 + gg2
+
+gg1 <- netVisual_heatmap(cellchat)
+gg2 <- netVisual_heatmap(cellchat, measure = "weight")
+gg1 + gg2
+
+df.net.CTR <- subsetCommunication(cellchat.CTR)
+df.net.PD <- subsetCommunication(cellchat.PD)
+
+
+# test enrichment in PD genetic risk associated genes in ligand/receptor interactions betwen any cell type
+
+cellcomm<-df.net.CTR
+Wtest_DaNs<-read.delim("Wtest_DaNs",h=T)
+dan3<-Wtest_DaNs[order(-Wtest_DaNs$DaN_3),] # to obtain DaN_3 specific genes
+pd_risk_odc2<-read.delim("MAGMA_pd_risk_odcs2",h=T) # to obtain pd risk associated genes to ODC_2
+
+# Here it is done for ODC_2 and DaN_3 interactions. It has to be repeated for any pair:
+p_test<-c()
+test_interact1<-cellcomm[(cellcomm$target=="DaN_3" & cellcomm$source=="ODC_2" & cellcomm$receptor%in%rownames(dan3)[1:1000])  ,]
+test_interact2<-cellcomm[(cellcomm$source=="DaN_3" & cellcomm$target=="ODC_2" & cellcomm$ligand%in%rownames(dan3)[1:1000])  ,]
+test_interact3<-cellcomm[(cellcomm$target=="DaN_3" & cellcomm$source=="ODC_2")  ,]
+test_interact4<-cellcomm[(cellcomm$source=="DaN_3" & cellcomm$target=="ODC_2")  ,]
+
+
+tmp4<-test_interact1[test_interact1$ligand%in%pd_risk_odc2$ID[1:200] ,]
+tmp5<-test_interact2[test_interact2$receptor%in%pd_risk_odc2$ID[1:200] ,]
+tmp6<-unique(c(tmp4$ligand,tmp5$receptor))
+if(length(tmp6)==0){
+    p_test<-c(p_test,1)
+}else{
+    p=0
+    for(i in 1:10000){
+        tmp_sample1<-sample(pd_risk_odc2$ID[201:1800],200)
+	tmp_interact1<-sample(test_interact3$ligand,length(unique(test_interact1$ligand)))
+	tmp_interact2<-sample(test_interact4$receptor,length(unique(test_interact2$receptor)))
+        
+        tmp2<-tmp_interact1[ tmp_interact1%in%tmp_sample1  ]
+        tmp3<-tmp_interact2[ tmp_interact2%in%tmp_sample1  ]
+        tmp7<-unique(c(tmp2,tmp3))
+        if(length(tmp7)>length(tmp6)){
+            p=p+1}
+    }
+    p_test<-c(p_test,p/10000)
+}
+p_test
+
+```
