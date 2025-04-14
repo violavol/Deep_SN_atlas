@@ -1,0 +1,110 @@
+---
+title: "Figure_5"
+author: "Viola Volpato"
+date: 'Last update: `r date()`'
+output:
+  html_document:
+    fig_height: 5
+    fig_width: 5
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+      toc_depth: 5
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+
+```{r clean r session, include=FALSE}
+rm(list = ls())
+```
+
+### Install and load library
+
+```{r load lib, echo=TRUE}
+library(ggplot2)
+library(Seurat)
+library(RColorBrewer)
+```
+
+
+### Load data
+
+```{r get raw data, echo=TRUE}
+load("/nfs/dri/02/rdscw/shared/webber/SNatlas_icell8_Novaseq/manuscript_data/sn_atlas_processed.RData")
+
+sn_atlas_processed <- NormalizeData(sn_atlas_processed)
+sn_atlas_processed <- FindVariableFeatures(sn_atlas_processed, selection.method = "vst", nfeatures = 2000)
+sn_atlas_processed <- ScaleData(sn_atlas_processed)
+sn_atlas_processed <- RunPCA(sn_atlas_processed, features = VariableFeatures(object = sn_atlas_processed))
+sn_atlas_processed <- FindNeighbors(sn_atlas_processed, dims = 1:10)
+sn_atlas_processed <- FindClusters(sn_atlas_processed, resolution = 0.6)
+sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
+
+```
+
+
+### Coexpression network analysis
+
+```{r coexpr, echo=TRUE}
+
+data_dan3<-as.matrix(GetAssayData(sn_atlas_DAN3, slot = "counts"))
+results.dan3=compute.network(expr.data = data_dan3,gene.names = rownames(data_dan3),clustering = "direct")
+
+m<-data.frame(results.dan3$correlations)
+coexp_dan3<-data.frame(row=rownames(m)[row(m)[upper.tri(m)]], 
+                       col=colnames(m)[col(m)[upper.tri(m)]], 
+                       corr=m[upper.tri(m)])
+
+
+coexp_dan3_08<-coexp_dan3[abs(coexp_dan3$corr)>0.8,]
+
+coexp_dan3_08_genes<-unique(c(as.character(coexp_dan3_08[,1]),as.character(coexp_dan3_08[,2])))
+net_dan3 <- graph_from_data_frame(d= coexp_dan3_08, vertices= coexp_dan3_08_genes, directed=F)
+cl_net<-cluster_louvain(net_dan3)
+memb_net_dan3<-as.matrix(membership(cl_net))
+memb_net_dan3_df<-data.frame(id=rownames(memb_net_dan3),module=memb_net_dan3)
+
+
+
+# GLP1R correlations
+
+coexp_dan3_08_glp1r <- coexp_dan3_08[coexp_dan3_08[,1]=="GLP1R" | coexp_dan3_08[,2]=="GLP1R",]
+coexp_dan3_08_glp1r_pos <- coexp_dan3_08_glp1r[coexp_dan3_08_glp1r$corr > 0,]
+coexp_dan3_08_glp1r_neg <- coexp_dan3_08_glp1r[coexp_dan3_08_glp1r$corr < 0,]
+
+
+```
+
+
+
+
+# SCENIC (Figure 6)
+
+```{r scenic, echo=TRUE}
+
+t<-subset(sn_atlas_dans,subset=Disease=="CTR")
+meta_dans <-as.data.frame(t@meta.data)
+sn_atlas_dans_red<-sn_atlas_dans[,colnames(sn_atlas_dans)%in%rownames(meta_dans)]
+Idents(sn_atlas_dans_red)<-sn_atlas_dans_red$CellSubType
+cellInfo <- data.frame(seuratCluster=Idents(sn_atlas_dans_red))
+rownames(cellInfo)<-colnames(sn_atlas_dans_red)
+
+regulonActivity_byCellType <- sapply(split(rownames(cellInfo), cellInfo[,1]),
+                                     function(cells) rowMeans(getAUC(regulonAUC_dans)[,cells]))
+
+
+
+
+regulonActivity_byCellType_Scaled <- t(scale(t(regulonActivity_byCellType), center = T, scale=T))
+ComplexHeatmap::Heatmap(regulonActivity_byCellType_Scaled, name="Regulon activity",row_names_gp =gpar(fontsize = 5))
+
+topRegulators <- reshape2::melt(regulonActivity_byCellType_Scaled)
+colnames(topRegulators) <- c("Regulon", "CellType", "RelativeActivity")
+topRegulators <- topRegulators[which(topRegulators$RelativeActivity>0),]
+
+```
