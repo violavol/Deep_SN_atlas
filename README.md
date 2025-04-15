@@ -1,6 +1,6 @@
 # A Parkinson’s nigral atlas reveals a molecular overlap with Type-2 Diabetes.
 
-This repository contains the code to reproduce figures and analysis in the manuscript.
+This repository contains the code to reproduce figures and analysis presented in the manuscript: A Parkinson’s nigral atlas reveals a molecular overlap with Type-2 Diabetes, Volpato et al.
 
 ## Data availability:
 
@@ -21,5 +21,5 @@ Raw and processed gene expression data has been deposited in GEO under the acces
 
 ## Folder structure:
 
-Files are numbered based on the figures in the manuscript.
+Files are numbered based on the figures presented in the manuscript.
 
