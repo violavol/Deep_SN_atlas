@@ -28,8 +28,6 @@ rm(list = ls())
 ```{r load lib, echo=TRUE}
 library(ggplot2)
 library(Seurat)
-devtools::install_github("rpolicastro/scProportionTest")
-library("scProportionTest")
 library(RColorBrewer)
 
 #ODC: "cadetblue1","deepskyblue3","blue4"
