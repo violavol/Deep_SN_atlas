@@ -169,5 +169,16 @@ df<-data.frame(table(sn_atlas_processed$CellSubType,sn_atlas_processed$Disease))
 # plot number_of_cells_byCellSubType_byDisease
 ggplot(df, aes(x = Var1, y = Freq, fill=Var2)) + geom_bar(stat = "identity", position=position_dodge()) +  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
+df<-data.frame(table(sn_atlas_processed$CellType,sn_atlas_processed$Sample_v2))
+# plot number_of_cells_byCellType_bySampleID
+ggplot(df, aes(x = Var1, y = Freq, fill=Var2)) + geom_bar(stat = "identity", position=position_dodge()) +  theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+df<-data.frame(sn_atlas_processed$CellType,sn_atlas_processed$nFeature_RNA)
+# plot number_of_genes_byCellType
+colnames(df)<-c("CellType","nGenes")
+ggplot(df,aes(x=CellType,y=nGenes,fill=CellType))+
+     geom_violin(trim=T, scale="width", adjust=0.5)+
+     theme_bw()
+
 
 ```
