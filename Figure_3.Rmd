@@ -29,6 +29,8 @@ rm(list = ls())
 library(ggplot2)
 library(Seurat)
 library(RColorBrewer)
+devtools::install_github("rpolicastro/scProportionTest")
+library("scProportionTest")
 ```
 
 
