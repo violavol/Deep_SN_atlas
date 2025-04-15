@@ -29,6 +29,7 @@ rm(list = ls())
 library(ggplot2)
 library(Seurat)
 library(RColorBrewer)
+library(topGO)
 ```
 
 
@@ -47,7 +48,7 @@ sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
 
 ```
 
-### Find cell type specific gene markers (Figure 2)
+### Find cell type specific gene markers 
 
 ```{r gene markers, echo=TRUE}
 
@@ -142,7 +143,7 @@ clusterALLMarkers <- FindAllMarkers(sn_atlas_processed, only.pos = FALSE, min.pc
 
 ```
 
-### Prepare for MAGMA analysis (Figure 2)
+### Prepare for MAGMA analysis 
 
 ```{r magma, echo=TRUE}
 
@@ -160,6 +161,15 @@ for(m in unique(df$cellt)){
  list_gene<-c(list_gene,val)
 }
 write.table(data.frame(list_gene),file="input_magma_level1_2p",quote=FALSE,row.names=FALSE,col.names=FALSE,sep="\t")
+
+# Create heatmap with results:
+
+magma_pd50k_L1_ALL<-read.table("magma_pd50k_L1_ALL",h=T)
+magma_pd50k_L1_ALL$expr <-factor(magma_pd50k_L1_ALL$expr, levels=as.character(unique(magma_pd50k_L1_ALL$expr)))
+ggplot(magma_pd50k_L1_ALL,aes(x = expr, y = celltype,fill = -log(pvalue)))+
+     geom_tile() + scale_fill_gradient2(high = "red", low = "white",midpoint=2.995732)+
+     geom_tile()
+
 
 ```
 
@@ -179,6 +189,36 @@ cl_net_1<-cluster_louvain(net_1)
 memb_net_1<-as.matrix(membership(cl_net_1))
 
 memb_net_dan3top1000ppi_df<-data.frame(id=rownames(memb_net_1),module=memb_net_1)
+
+# run GO enrichment for each module:
+
+xx <- annFUN.org("BP", mapping = "org.Hs.eg.db", ID = "symbol")
+allGenes <- unique(unlist(xx))
+listGenesDE1<-as.character(rownames(df_w_test_DaN[oder(-df_w_test_DaN$DaN_3),])[1:10000])
+listGenesDE1_fdr01<-as.character(memb_net_dan3top1000ppi_df[memb_net_dan3top1000ppi_df$module==1,1])
+universeGenes<-as.character(allGenes[allGenes%in%listGenesDE1])
+geneList <- factor(as.integer(universeGenes %in% listGenesDE1_fdr01))
+names(geneList)<-universeGenes
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              nodeSize = 10,
+              annot = annFUN.org, 
+              mapping = "org.Hs.eg.db",
+              ID = "symbol")
+GOenrich<-runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resGO_memb_net_dan3top1000ppi_M1 <- GenTable(GOdata, classic = GOenrich, ranksOf = "classic", topNodes = 100)
+
+# create final DotPlot with top enriched GO terms for any PPI modules in DaN_3, ODC_2 and OPC:
+
+GO_toPlot<-read.delim("GO_toPlot_PPImod_dan3_odc2_opc",h=T)
+GO_toPlot$CellType_Mod<-paste(GO_toPlot$CellType,GO_toPlot$Module,sep="_")
+GO_toPlot$Term <-factor(GO_toPlot$Term, levels=as.character(unique(GO_toPlot$Term)))
+GO_toPlot$CellType_Mod <-factor(GO_toPlot$CellType_Mod, levels=as.character(unique(GO_toPlot$CellType_Mod)))
+
+ggplot(GO_toPlot,aes(x =CellType_Mod , y = Term)) +  
+    geom_point(aes(size= -log(as.numeric(P)), color= CellType)) + scale_size(range = c(4, 8)) +
+    scale_color_manual(values=c("darkorange3","blue4","purple"))+ theme(axis.text.y = element_text( color = "black",size = 10)) + theme(axis.text.x = element_text( color = "black",size = 10, angle = 90,hjust=1)) + guides(colour = guide_legend(override.aes = list(size=8))) 
 
 
 ```
