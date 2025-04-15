@@ -113,7 +113,7 @@ genesALL<-as.matrix(GetAssayData(combined_all, slot = "counts"))
 # TO DO FOR EACH MAIN CELL TYPE
 
 metadataALL_tmp<-metadataALL[metadataALL$CellType=="DaN",]
-metadataALL_tmp<-metadataALL_tmp[metadataALL_tmp$Sample_v2!="14_133",] # outlier sample in both UMAP plot of all DaNs and in following pseudotime analysis (still to investigate why)
+metadataALL_tmp<-metadataALL_tmp[metadataALL_tmp$Sample_v2!="14_133",] # outlier sample in both UMAP plot of all DaNs and in following pseudotime analysis 
 genesALL_tmp<-genesALL[,colnames(genesALL)%in%rownames(metadataALL_tmp)]
 
 tmp_cell <- CreateSeuratObject(counts = genesALL_tmp, min.cells = 0, min.features = 0,meta.data= metadataALL_tmp)
