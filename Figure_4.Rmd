@@ -29,6 +29,8 @@ rm(list = ls())
 library(ggplot2)
 library(Seurat)
 library(RColorBrewer)
+library(CellChat)
+library(patchwork)
 ```
 
 
@@ -47,12 +49,10 @@ sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
 
 ```
 
-### Cell-cell communication analysis (Figure 4)
+### Cell-cell communication analysis 
 
 ```{r cellcomm, echo=TRUE}
 
-library(CellChat)
-library(patchwork)
 
 sn_atlas_ctr<-subset(sn_atlas_processed,subset=Disease=="CTR")
 sn_atlas_pd<-subset(sn_atlas_processed,subset=Disease=="PD_B5-6")
@@ -178,5 +178,7 @@ if(length(tmp6)==0){
     p_test<-c(p_test,p/10000)
 }
 p_test
+
+# Figure 4c refers to ODC disease progression trajectory computed in Figure_3.Rmd where only ligand/receptors of interest are plotted in the heatmap.
 
 ```
