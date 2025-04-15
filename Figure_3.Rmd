@@ -31,6 +31,9 @@ library(Seurat)
 library(RColorBrewer)
 devtools::install_github("rpolicastro/scProportionTest")
 library("scProportionTest")
+library(speckle)
+library(limma)
+
 ```
 
 
@@ -49,14 +52,10 @@ sn_atlas_processed <- RunUMAP(sn_atlas_processed, dims = 1:10)
 
 ```
 
-### Changes in cell type proportions (Figure 3)
+### Changes in cell type proportions 
 
 ```{r cell_prop, echo=TRUE}
 
-library("scProportionTest")
-library(speckle)
-library(limma)
-library(ggplot2)
 
 # Method 1, use FDR-corrected p-values:
 prop_test <- sc_utils(sn_atlas_processed)
@@ -99,7 +98,7 @@ dev.off()
 
 ```
 
-### Find DEGs CTR vs PD within each cell type (Figure 3)
+### Find DEGs CTR vs PD within each cell type 
 
 ```{r deg_by_cellType, echo=TRUE}
 
@@ -221,7 +220,7 @@ jaccard(deg_FC1andPadj05_PD56_genes$Tcell, deg_FC1andPadj05_PD34_genes$Tcell)))
 
 ```
 
-### Pathway analysis (Figure 3)
+### Pathway analysis 
 
 ```{r GOenrich_cellType, echo=TRUE}
 library(topGO)
@@ -261,7 +260,7 @@ treemapPlot(reducedTerms)
 ```
 
 
-### Pseudotime analysis for each cell type (Figure 3)
+### Pseudotime analysis for each cell type (Supplementary Results)
 
 ```{r pseudotime_cellType, echo=TRUE}
 
@@ -491,7 +490,7 @@ ggplot(tmp, aes(x = -log(classic), y = Term,fill=Mod)) + geom_bar(stat = "identi
 ```
 
 
-### Isoform Analysis (Figure 3)
+### Isoform Analysis 
 
 ```{r isoform, echo=TRUE}
 library(fishpond)
